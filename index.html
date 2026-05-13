@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>东京菜鸟表处理工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 24px;
+      color: #222;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    h1 { margin-top: 0; font-size: 24px; }
+    .note {
+      background: #fff8e5;
+      border-left: 5px solid #f0b429;
+      padding: 12px 16px;
+      border-radius: 8px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="file"], select, input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      background: #fff;
+    }
+    .settings {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .log {
+      margin-top: 18px;
+      padding: 14px;
+      background: #111827;
+      color: #d1fae5;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      min-height: 110px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+    .small { color: #666; font-size: 13px; line-height: 1.5; }
+    @media (max-width: 800px) {
+      .grid, .settings { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>东京菜鸟表处理工具</h1>
+    <div class="note">
+      <b>用途：</b>上传需要处理的东京菜鸟表 + 黑猫参照表。工具会修剪地址、匹配黑猫表邮编/分拣码，并处理手机号。所有处理都在浏览器本地完成，不会上传到服务器。
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <label>① 东京菜鸟表（需要修改的文件）</label>
+        <input id="targetFile" type="file" accept=".xlsx,.xls" />
+        <p class="small">默认读取第一个Sheet。原始地址列、手机号列、输出列可在下方设置。</p>
+      </div>
+      <div class="card">
+        <label>② 黑猫参照表</label>
+        <input id="refFile" type="file" accept=".xlsx,.xls" />
+        <p class="small">默认读取 Sheet1。要求：A列=邮编，B列=分拣码，E列=完整地址。</p>
+      </div>
+    </div>
+
+    <div class="settings">
+      <div>
+        <label>东京菜鸟：原始地址列</label>
+        <input id="addressCol" type="text" value="F" />
+      </div>
+      <div>
+        <label>东京菜鸟：手机号列</label>
+        <input id="phoneCol" type="text" value="C" />
+      </div>
+      <div>
+        <label>开始行</label>
+        <input id="startRow" type="text" value="1" />
+      </div>
+      <div>
+        <label>输出：修剪地址列</label>
+        <input id="trimmedAddressCol" type="text" value="A" />
+      </div>
+      <div>
+        <label>输出：邮编列</label>
+        <input id="zipCol" type="text" value="B" />
+      </div>
+      <div>
+        <label>输出：分拣码列</label>
+        <input id="sortCodeCol" type="text" value="C" />
+      </div>
+      <div>
+        <label>输出：处理后手机号列</label>
+        <input id="phoneOutCol" type="text" value="D" />
+      </div>
+    </div>
+
+    <button id="runBtn">开始处理并下载结果</button>
+    <div id="log" class="log">等待上传文件...</div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function log(message) {
+    $("log").textContent += "\n" + message;
+  }
+
+  function resetLog(message) {
+    $("log").textContent = message;
+  }
+
+  function colLetterToIndex(letter) {
+    const s = String(letter).trim().toUpperCase();
+    let n = 0;
+    for (let i = 0; i < s.length; i++) {
+      const code = s.charCodeAt(i);
+      if (code < 65 || code > 90) throw new Error("列名不正确: " + letter);
+      n = n * 26 + (code - 64);
+    }
+    return n - 1;
+  }
+
+  function getCell(row, colIndex) {
+    const v = row[colIndex];
+    return v == null ? "" : String(v).trim();
+  }
+
+  function cleanSpaces(value) {
+    return String(value == null ? "" : value)
+      .replace(/\u3000/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+  }
+
+  function findFromSecondCharAfterPrefecture(s, chars) {
+    const prefectureMarks = ["県", "都", "府", "道"];
+    let p = -1;
+    for (const mark of prefectureMarks) {
+      const i = s.indexOf(mark);
+      if (i >= 0 && (p < 0 || i < p)) p = i;
+    }
+
+    // 关键规则：无视都道府県后面出现的第一个字。
+    // 例：千葉県市原市 -> 从「市原市」的第二个字符开始找，所以会命中后面的「市」。
+    const start = p >= 0 ? p + 2 : 0;
+
+    let best = -1;
+    for (const ch of chars) {
+      const idx = s.indexOf(ch, start);
+      if (idx >= 0 && (best < 0 || idx < best)) best = idx;
+    }
+    return best;
+  }
+
+  function trimJapaneseAddress(value) {
+    const s = cleanSpaces(value);
+    if (!s) return "";
+
+    // 先找区/町；找不到再找市/郡
+    let pos = findFromSecondCharAfterPrefecture(s, ["区", "町"]);
+    if (pos < 0) pos = findFromSecondCharAfterPrefecture(s, ["市", "郡"]);
+
+    return pos >= 0 ? s.slice(0, pos + 1) : s;
+  }
+
+  function normalizePhone(value) {
+    const s = String(value == null ? "" : value).replace(/\s+/g, "");
+    if (s.length <= 3) return "00000000";
+    return s.slice(3);
+  }
+
+  function readWorkbook(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          resolve(XLSX.read(data, { type: "array" }));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function buildReferenceIndex(refRows) {
+    // 黑猫表：A列=邮编, B列=分拣码, E列=完整地址
+    const index = [];
+    for (let i = 0; i < refRows.length; i++) {
+      const row = refRows[i];
+      const zip = getCell(row, 0);
+      const sortCode = getCell(row, 1);
+      const fullAddress = cleanSpaces(getCell(row, 4));
+      if (!fullAddress) continue;
+      index.push({ fullAddress, zip, sortCode, rowNumber: i + 1 });
+    }
+    return index;
+  }
+
+  function lookupByPrefix(trimmedAddress, refIndex) {
+    if (!trimmedAddress) return null;
+    for (const item of refIndex) {
+      if (item.fullAddress.startsWith(trimmedAddress)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  $("runBtn").addEventListener("click", async () => {
+    try {
+      resetLog("处理中...");
+
+      const targetFile = $("targetFile").files[0];
+      const refFile = $("refFile").files[0];
+      if (!targetFile || !refFile) {
+        alert("请先上传东京菜鸟表和黑猫参照表。");
+        resetLog("等待上传文件...");
+        return;
+      }
+
+      const addressCol = colLetterToIndex($("addressCol").value);
+      const phoneCol = colLetterToIndex($("phoneCol").value);
+      const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
+      const trimmedAddressCol = colLetterToIndex($("trimmedAddressCol").value);
+      const zipCol = colLetterToIndex($("zipCol").value);
+      const sortCodeCol = colLetterToIndex($("sortCodeCol").value);
+      const phoneOutCol = colLetterToIndex($("phoneOutCol").value);
+
+      log("读取东京菜鸟表...");
+      const targetWb = await readWorkbook(targetFile);
+      const targetSheetName = targetWb.SheetNames[0];
+      const targetWs = targetWb.Sheets[targetSheetName];
+      const targetRows = XLSX.utils.sheet_to_json(targetWs, { header: 1, raw: false, defval: "" });
+
+      log("读取黑猫参照表...");
+      const refWb = await readWorkbook(refFile);
+      const refSheetName = refWb.SheetNames.includes("Sheet1") ? "Sheet1" : refWb.SheetNames[0];
+      const refWs = refWb.Sheets[refSheetName];
+      const refRows = XLSX.utils.sheet_to_json(refWs, { header: 1, raw: false, defval: "" });
+
+      log("建立黑猫地址索引...");
+      const refIndex = buildReferenceIndex(refRows);
+      log("黑猫参照地址数量: " + refIndex.length);
+
+      let matched = 0;
+      let unmatched = 0;
+      let processed = 0;
+
+      for (let r = startRow; r < targetRows.length; r++) {
+        const row = targetRows[r];
+        if (!row || row.length === 0) continue;
+
+        const originalAddress = getCell(row, addressCol);
+        const phone = getCell(row, phoneCol);
+
+        const trimmed = trimJapaneseAddress(originalAddress);
+        row[trimmedAddressCol] = trimmed;
+        row[phoneOutCol] = normalizePhone(phone);
+
+        const hit = lookupByPrefix(trimmed, refIndex);
+        if (hit) {
+          row[zipCol] = hit.zip;
+          row[sortCodeCol] = hit.sortCode;
+          matched++;
+        } else {
+          row[zipCol] = "";
+          row[sortCodeCol] = "";
+          unmatched++;
+        }
+        processed++;
+      }
+
+      log("处理完成。总行数: " + processed);
+      log("匹配成功: " + matched);
+      log("未匹配: " + unmatched);
+
+      const newWs = XLSX.utils.aoa_to_sheet(targetRows);
+      targetWb.Sheets[targetSheetName] = newWs;
+
+      const baseName = targetFile.name.replace(/\.(xlsx|xls)$/i, "");
+      const outputName = baseName + "_processed.xlsx";
+      XLSX.writeFile(targetWb, outputName);
+      log("已生成下载文件: " + outputName);
+    } catch (err) {
+      console.error(err);
+      resetLog("出错了：\n" + err.message);
+    }
+  });
+</script>
+</body>
+</html>
