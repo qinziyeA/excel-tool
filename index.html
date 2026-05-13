@@ -102,7 +102,7 @@
       <div class="card">
         <label>① 东京菜鸟表（需要修改的文件）</label>
         <input id="targetFile" type="file" accept=".xlsx,.xls,.csv" />
-        <p class="small">默认读取第一个Sheet。原始地址列、手机号列、输出列可在下方设置。</p>
+        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；地址只用于匹配，不会写回；匹配结果写入E列和U列。</p>配结果写入E列和U列。</p>
       </div>
       <div class="card">
         <label>② 黑猫参照表</label>
@@ -117,7 +117,7 @@
         <input id="addressCol" type="text" value="F" />
       </div>
       <div>
-        <label>东京菜鸟：手机号列</label>
+        <label>东京菜鸟：手机号列（原地修改）</label>
         <input id="phoneCol" type="text" value="C" />
       </div>
       <div>
@@ -125,20 +125,12 @@
         <input id="startRow" type="text" value="1" />
       </div>
       <div>
-        <label>输出：修剪地址列</label>
-        <input id="trimmedAddressCol" type="text" value="A" />
+        <label>输出：黑猫A列邮编 → 菜鸟列</label>
+        <input id="zipCol" type="text" value="E" />
       </div>
       <div>
-        <label>输出：邮编列</label>
-        <input id="zipCol" type="text" value="B" />
-      </div>
-      <div>
-        <label>输出：分拣码列</label>
-        <input id="sortCodeCol" type="text" value="C" />
-      </div>
-      <div>
-        <label>输出：处理后手机号列</label>
-        <input id="phoneOutCol" type="text" value="D" />
+        <label>输出：黑猫B列分拣码 → 菜鸟列</label>
+        <input id="sortCodeCol" type="text" value="U" />
       </div>
     </div>
 
@@ -222,8 +214,7 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target.result);
-          resolve(XLSX.read(data, { type: "array" }));
+          const data = new Uint8Array(e.target.resue: "array", raw: true, cellText: false, cellDates: false }));
         } catch (err) {
           reject(err);
         }
@@ -247,10 +238,7 @@
           try {
             text = new TextDecoder("shift-jis").decode(buffer);
           } catch (_) {
-            text = new TextDecoder("utf-8").decode(buffer);
-          }
-
-          const wb = XLSX.read(text, { type: "string", raw: false });
+            text = new  const wb = XLSX.read(text, { type: "string", raw: true });
           resolve(wb);
         } catch (err) {
           reject(err);
@@ -300,22 +288,12 @@
       const addressCol = colLetterToIndex($("addressCol").value);
       const phoneCol = colLetterToIndex($("phoneCol").value);
       const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
-      const trimmedAddressCol = colLetterToIndex($("trimmedAddressCol").value);
       const zipCol = colLetterToIndex($("zipCol").value);
-      const sortCodeCol = colLetterToIndex($("sortCodeCol").value);
-      const phoneOutCol = colLetterToIndex($("phoneOutCol").value);
-
-      log("读取东京菜鸟表...");
-      const targetWb = await readTargetWorkbook(targetFile);
-      const targetSheetName = targetWb.SheetNames[0];
-      const targetWs = targetWb.Sheets[targetSheetName];
-      const targetRows = XLSX.utils.sheet_to_json(targetWs, { header: 1, raw: false, defval: "" });
+      const sortCodeCol = colLetterTheet_to_json(targetWs, { header: 1, raw: false, defval: "" });
 
       log("读取黑猫参照表...");
       const refWb = await readWorkbook(refFile);
-      const refSheetName = refWb.SheetNames.includes("Sheet1") ? "Sheet1" : refWb.SheetNames[0];
-      const refWs = refWb.Sheets[refSheetName];
-      const refRows = XLSX.utils.sheet_to_json(refWs, { header: 1, raw: false, defval: "" });
+      const refSheetName = refWb.SheetNames.includes("Sheet1") ? "SRows = XLSX.utils.sheet_to_json(refWs, { header: 1, raw: false, defval: "" });
 
       log("建立黑猫地址索引...");
       const refIndex = buildReferenceIndex(refRows);
@@ -325,16 +303,13 @@
       let unmatched = 0;
       let processed = 0;
 
-      for (let r = startRow; r < targetRows.length; r++) {
-        const row = targetRows[r];
-        if (!row || row.length === 0) continue;
+      for (let r = startRow; r < targetRows) continue;
 
         const originalAddress = getCell(row, addressCol);
         const phone = getCell(row, phoneCol);
 
         const trimmed = trimJapaneseAddress(originalAddress);
-        row[trimmedAddressCol] = trimmed;
-        row[phoneOutCol] = normalizePhone(phone);
+        row[phoneCol] = normalizePhone(phone);
 
         const hit = lookupByPrefix(trimmed, refIndex);
         if (hit) {
@@ -354,15 +329,21 @@
       log("未匹配: " + unmatched);
 
       const newWs = XLSX.utils.aoa_to_sheet(targetRows);
+
+      // 强制所有单元格按文本写出，尽量] === "!") return;
+        const cell = newWs[addr];
+        if (cell && cell.v != null) {
+          cell.t = "s";
+          cell.v = String(cell.v);
+          cell.w = String(cell.v);
+        }
+      });
       targetWb.Sheets[targetSheetName] = newWs;
 
       const baseName = targetFile.name.replace(/\.(xlsx|xls)$/i, "");
       const outputName = baseName + "_processed.xlsx";
       XLSX.writeFile(targetWb, outputName);
-      log("已生成下载文件: " + outputName);
-    } catch (err) {
-      console.error(err);
-      resetLog("出错了：\n" + err.message);
+      log("已生成下载文件: " + outputName);   resetLog("出错了：\n" + err.message);
     }
   });
 </script>
