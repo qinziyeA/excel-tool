@@ -102,7 +102,7 @@
       <div class="card">
         <label>① 东京菜鸟表（需要修改的文件）</label>
         <input id="targetFile" type="file" accept=".xlsx,.xls,.csv" />
-        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；地址只用于匹配，不会写回；匹配结果写入E列和U列。</p>
+        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；地址只在E列邮编为空时用于匹配，不会写回；匹配结果写入E列和U列。</p>
       </div>
       <div class="card">
         <label>② 黑猫参照表</label>
@@ -205,6 +205,8 @@
 
   function normalizePhone(value) {
     const s = String(value == null ? "" : value).replace(/\s+/g, "");
+    if (!s) return "00000000";
+    if (!s.startsWith("+")) return s;
     if (s.length <= 3) return "00000000";
     return s.slice(3);
   }
@@ -313,6 +315,7 @@
 
       let matched = 0;
       let unmatched = 0;
+      let skippedExistingZip = 0;
       let processed = 0;
 
       for (let r = startRow; r < targetRows.length; r++) {
@@ -322,9 +325,18 @@
         const originalAddress = getCell(row, addressCol);
         const phone = getCell(row, phoneCol);
 
-        const trimmed = trimJapaneseAddress(originalAddress);
+        // 手机号：空白补00000000；不是+开头则原样保留；+开头才删除前3位。
         row[phoneCol] = normalizePhone(phone);
 
+        // 如果菜鸟表E列已有邮编，就不再修剪地址、不重新匹配、不覆盖E/U列。
+        const existingZip = getCell(row, zipCol);
+        if (existingZip) {
+          skippedExistingZip++;
+          processed++;
+          continue;
+        }
+
+        const trimmed = trimJapaneseAddress(originalAddress);
         const hit = lookupByPrefix(trimmed, refIndex);
         if (hit) {
           row[zipCol] = hit.zip;
@@ -340,6 +352,7 @@
 
       log("处理完成。总行数: " + processed);
       log("匹配成功: " + matched);
+      log("已有邮编跳过: " + skippedExistingZip);
       log("未匹配: " + unmatched);
 
       const newWs = XLSX.utils.aoa_to_sheet(targetRows);
@@ -356,7 +369,7 @@
       });
       targetWb.Sheets[targetSheetName] = newWs;
 
-      const baseName = targetFile.name.replace(/\.(xlsx|xls)$/i, "");
+      const baseName = targetFile.name.replace(/\.(csv|xlsx|xls)$/i, "");
       const outputName = baseName + "_processed.xlsx";
       XLSX.writeFile(targetWb, outputName);
       log("已生成下载文件: " + outputName);
