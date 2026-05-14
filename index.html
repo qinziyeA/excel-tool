@@ -15,22 +15,18 @@ body {
   background: #f5f7fa;
 }
 
-/* 顶部标题 */
 .header {
   background: #fff;
   padding: 16px 24px;
   border-bottom: 1px solid #eee;
-  font-size: 18px;
   font-weight: bold;
 }
 
-/* 主体 */
 .container {
   max-width: 900px;
   margin: 30px auto;
 }
 
-/* 卡片 */
 .card {
   background: #fff;
   border-radius: 8px;
@@ -38,7 +34,6 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-/* 上传 */
 .upload-box {
   border: 2px dashed #ccc;
   padding: 40px;
@@ -46,9 +41,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   color: #888;
+  transition: all 0.2s;
 }
 
-/* 输入 */
+.upload-box.dragover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
 .settings {
   display: grid;
   grid-template-columns: repeat(3,1fr);
@@ -62,7 +62,6 @@ input {
   border-radius: 6px;
 }
 
-/* 按钮 */
 button {
   margin-top: 20px;
   padding: 12px;
@@ -74,7 +73,6 @@ button {
   cursor: pointer;
 }
 
-/* log */
 .log {
   margin-top: 20px;
   background: #111827;
@@ -89,25 +87,17 @@ button {
 
 <body>
 
-<div class="header">
-データ修正＆検証ツール
-</div>
+<div class="header">データ修正＆検証ツール</div>
 
 <div class="container">
 <div class="card">
 
-<!-- 上传 -->
-<div onclick="targetFile.click()" class="upload-box">
-上传东京菜鸟表
-</div>
+<div class="upload-box" id="box1">拖拽或点击上传东京菜鸟表</div>
 <input id="targetFile" type="file" style="display:none">
 
-<div onclick="refFile.click()" class="upload-box" style="margin-top:10px;">
-上传黑猫参照表
-</div>
+<div class="upload-box" id="box2" style="margin-top:10px;">拖拽或点击上传黑猫参照表</div>
 <input id="refFile" type="file" style="display:none">
 
-<!-- 参数 -->
 <div class="settings">
 <input id="addressCol" value="F">
 <input id="phoneCol" value="C">
@@ -174,6 +164,37 @@ resolve(wb);
 r.readAsArrayBuffer(file);
 });
 }
+
+// 拖拽功能
+function enableDrag(boxId,inputId){
+const box=$(boxId);
+const input=$(inputId);
+
+box.onclick=()=>input.click();
+
+box.addEventListener("dragover",e=>{
+e.preventDefault();
+box.classList.add("dragover");
+});
+
+box.addEventListener("dragleave",()=>{
+box.classList.remove("dragover");
+});
+
+box.addEventListener("drop",e=>{
+e.preventDefault();
+box.classList.remove("dragover");
+
+const files=e.dataTransfer.files;
+if(files.length){
+input.files=files;
+box.textContent="已选择: "+files[0].name;
+}
+});
+}
+
+enableDrag("box1","targetFile");
+enableDrag("box2","refFile");
 
 $("runBtn").onclick=async()=>{
 
