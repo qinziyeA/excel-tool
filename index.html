@@ -8,9 +8,21 @@
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f7fa;}
-.main{max-width:1000px;margin:40px auto;}
-.card{background:#fff;padding:25px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.05);}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f5f7fa;
+}
+.main{
+  max-width:1000px;
+  margin:40px auto;
+}
+.card{
+  background:#fff;
+  padding:25px;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
 .upload-box{
   border:2px dashed #ccc;
   padding:30px;
@@ -18,18 +30,35 @@ body{margin:0;font-family:Arial;background:#f5f7fa;}
   cursor:pointer;
   border-radius:8px;
   margin-bottom:10px;
-  transition:0.2s;
 }
-.upload-box:hover{border-color:#1677ff;}
 .settings{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:12px;
   margin-top:20px;
 }
-input{padding:10px;border:1px solid #ddd;border-radius:6px;}
-button{margin-top:20px;padding:12px;background:#1677ff;color:white;border:none;border-radius:6px;width:100%;}
-.log{margin-top:20px;background:#111827;color:#d1fae5;padding:12px;border-radius:6px;font-family:monospace;}
+input{
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+button{
+  margin-top:20px;
+  padding:12px;
+  background:#1677ff;
+  color:white;
+  border:none;
+  border-radius:6px;
+  width:100%;
+}
+.log{
+  margin-top:20px;
+  background:#111827;
+  color:#d1fae5;
+  padding:12px;
+  border-radius:6px;
+  font-family:monospace;
+}
 </style>
 </head>
 
@@ -47,11 +76,11 @@ button{margin-top:20px;padding:12px;background:#1677ff;color:white;border:none;b
 <input id="refFile" type="file" hidden>
 
 <div class="settings">
-<input id="addressCol" value="F">
-<input id="phoneCol" value="C">
-<input id="startRow" value="1">
-<input id="zipCol" value="E">
-<input id="sortCodeCol" value="U">
+  <input id="addressCol" value="F">
+  <input id="phoneCol" value="C">
+  <input id="startRow" value="1">
+  <input id="zipCol" value="E">
+  <input id="sortCodeCol" value="U">
 </div>
 
 <button id="runBtn">开始处理</button>
@@ -62,17 +91,29 @@ button{margin-top:20px;padding:12px;background:#1677ff;color:white;border:none;b
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-function log(msg){$("log").textContent+="\n"+msg;}
+function log(msg){
+  $("log").textContent += "\n" + msg;
+}
 
-// 列字母转索引
+// 列字母 → 索引
 function colIndex(letter){
   let n=0;
   for(let i=0;i<letter.length;i++){
     n=n*26+letter.charCodeAt(i)-64;
   }
   return n-1;
+}
+
+// ⭐ 防科学计数法
+function forceTextIfNeeded(value){
+  if(value===undefined||value===null) return "";
+  value = String(value);
+  if(/^\d{10,}$/.test(value)){
+    return '="'+value+'"';
+  }
+  return value;
 }
 
 // 手机号处理
@@ -83,7 +124,7 @@ function normalizePhone(v){
   return v;
 }
 
-// 地址截取（你要求的逻辑）
+// ⭐ 地址逻辑（保持你原思路）
 function trimAddress(addr){
   if(!addr) return "";
   addr=addr.replace(/\s/g,"");
@@ -101,7 +142,7 @@ function trimAddress(addr){
   return addr;
 }
 
-// ⭐ 关键：安全拖拽绑定
+// 拖拽绑定（修复版）
 function bindUpload(box,input){
 
   box.addEventListener("click",()=>input.click());
@@ -121,7 +162,6 @@ function bindUpload(box,input){
 
     const files=e.dataTransfer.files;
     if(files.length>0){
-      // ⭐ 用 DataTransfer 解决浏览器限制
       const dt=new DataTransfer();
       dt.items.add(files[0]);
       input.files=dt.files;
@@ -160,8 +200,11 @@ $("runBtn").onclick=async()=>{
   const targetWb=await read(target);
   const refWb=await read(ref);
 
-  let targetRows=XLSX.utils.sheet_to_json(targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
-  let refRows=XLSX.utils.sheet_to_json(refWb.Sheets[refWb.SheetNames[0]],{header:1});
+  let targetRows=XLSX.utils.sheet_to_json(
+    targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
+
+  let refRows=XLSX.utils.sheet_to_json(
+    refWb.Sheets[refWb.SheetNames[0]],{header:1});
 
   // 黑猫索引
   const map={};
@@ -185,10 +228,12 @@ $("runBtn").onclick=async()=>{
     let r=targetRows[i];
     if(!r) continue;
 
-    r[phoneCol]=normalizePhone(r[phoneCol]);
+    // ⭐ 手机号处理 + 防E+11
+    r[phoneCol]=forceTextIfNeeded(normalizePhone(r[phoneCol]));
 
     if(!r[zipCol]){
       let addr=trimAddress(r[addrCol]);
+
       if(map[addr]){
         r[zipCol]=map[addr].zip;
         r[sortCol]=map[addr].code;
@@ -198,19 +243,28 @@ $("runBtn").onclick=async()=>{
 
   log("处理完成");
 
-  // ⭐ 导出SJIS CSV（日本系统用）
+  // ⭐ 导出CSV（关键修复）
   const newWs=XLSX.utils.aoa_to_sheet(targetRows);
+
   const csv=XLSX.utils.sheet_to_csv(newWs);
 
-  const sjis=Encoding.convert(csv,{
+  // ⭐ 全局防科学计数法
+  const safeCsv = csv.replace(
+    /(^|,)(\d{10,})(?=,|$)/g,
+    (m,p1,p2)=>`${p1}="${p2}"`
+  );
+
+  const sjisArray=Encoding.convert(safeCsv,{
     to:"SJIS",
     from:"UNICODE",
     type:"array"
   });
 
-  const blob=new Blob([new Uint8Array(sjis)],{type:"text/csv"});
-  const link=document.createElement("a");
+  const blob=new Blob([new Uint8Array(sjisArray)],{
+    type:"text/csv"
+  });
 
+  const link=document.createElement("a");
   link.href=URL.createObjectURL(blob);
   link.download="result.csv";
   link.click();
