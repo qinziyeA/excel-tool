@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>データ生成ツール</title>
+<title>YNE大阪佐川データ生成</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -19,12 +19,12 @@ button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:n
 
 <div class="card">
 
-<h2>Sheet3生成ツール</h2>
+<h2>YNE大阪佐川データ生成ツール</h2>
 
 <input type="file" id="file">
 
-<p>匹配数据（A-B格式）:</p>
-<textarea id="mapData" placeholder="YNE0001-123456"></textarea>
+<p>匹配数据（A-B格式，一行一条）:</p>
+<textarea id="mapData"></textarea>
 
 <button id="run">生成CSV</button>
 
@@ -36,17 +36,27 @@ button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:n
 
 const $ = id => document.getElementById(id);
 
-function today(){
+function todayFull(){
   const d = new Date();
   return d.getFullYear().toString() +
          String(d.getMonth()+1).padStart(2,'0') +
          String(d.getDate()).padStart(2,'0');
 }
 
-// 强制字符串（防止科学计数法）
+function todayShort(){
+  const d = new Date();
+  return String(d.getMonth()+1).padStart(2,'0') +
+         String(d.getDate()).padStart(2,'0');
+}
+
 function toStr(v){
   if(v===undefined || v===null) return "";
   return String(v).replace(/\.0$/, "");
+}
+
+function clean(v){
+  if(!v) return "";
+  return String(v).replace(/,/g, " "); // 防止触发引号
 }
 
 $("run").onclick = () => {
@@ -67,7 +77,6 @@ $("run").onclick = () => {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1});
 
-    // 👉 解析匹配关系
     const map = {};
     mapText.split("\n").forEach(line=>{
       if(!line.includes("-")) return;
@@ -82,40 +91,44 @@ $("run").onclick = () => {
       const r = rows[i];
       if(!r) continue;
 
-      const key = toStr(r[4]); // Sheet1 E列
+      const key = toStr(r[4]); // E列
 
       if(!map[key]) continue;
 
       const newRow = [
-        today(),            // A
-        "14430257",         // B
-        "028",              // C
-        "2",                // D
-        map[key],           // E
-        toStr(r[32]),       // F = AG
-        toStr(r[33]),       // G = AH
-        map[key],           // H
-        toStr(r[5]),        // I = F
-        toStr(r[34]),       // J = AI
-        (parseFloat(r[6])||0).toFixed(1) // K = G
+        todayFull(),
+        "14430257",
+        "028",
+        "2",
+        toStr(map[key]),
+        toStr(r[32]),
+        toStr(r[33]),
+        toStr(map[key]),
+        clean(r[5]),
+        toStr(r[34]),
+        (parseFloat(r[6])||0).toFixed(1)
       ];
 
       result.push(newRow);
     }
 
-    // 👉 转CSV
-    const ws2 = XLSX.utils.aoa_to_sheet(result);
-    const csv = XLSX.utils.sheet_to_csv(ws2);
+    // 👉 生成CSV
+    let csv = XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(result));
 
-    // 👉 下载
+    // 👉 强制去掉双引号
+    csv = csv.replace(/"/g, "");
+
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const link = document.createElement("a");
 
     link.href = URL.createObjectURL(blob);
-    link.download = "Sheet3.csv";
+
+    // 👉 文件名
+    link.download = "YNE" + todayShort() + ".csv";
+
     link.click();
 
-    $("log").textContent = "生成完成，共 " + result.length + " 条";
+    $("log").textContent = "完成，共生成 " + result.length + " 条数据";
   };
 
   reader.readAsArrayBuffer(file);
