@@ -24,7 +24,7 @@ button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:n
 <input type="file" id="file">
 
 <p>匹配数据（A-B格式，一行一条）:</p>
-<textarea id="mapData"></textarea>
+<textarea id="mapData" placeholder="YNE0001-123456"></textarea>
 
 <button id="run">生成CSV</button>
 
@@ -36,7 +36,7 @@ button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:n
 
 const $ = id => document.getElementById(id);
 
-// 日期
+// 👉 日期（20260514）
 function todayFull(){
   const d = new Date();
   return d.getFullYear().toString() +
@@ -44,26 +44,27 @@ function todayFull(){
          String(d.getDate()).padStart(2,'0');
 }
 
+// 👉 文件名用（0514）
 function todayShort(){
   const d = new Date();
   return String(d.getMonth()+1).padStart(2,'0') +
          String(d.getDate()).padStart(2,'0');
 }
 
-// 防科学计数法
+// 👉 转字符串（防科学计数法）
 function toStr(v){
   if(v===undefined || v===null) return "";
   return String(v);
 }
 
-// ⭐ 核心：防CSV引号
+// 👉 CSV安全处理（绝对不触发引号）
 function safe(v){
   if(v === undefined || v === null) return "";
 
   return String(v)
-    .replace(/,/g, " ")
-    .replace(/"/g, "")
-    .replace(/\r?\n/g, " ");
+    .replace(/,/g, " ")       // 去逗号
+    .replace(/"/g, "")        // 去引号
+    .replace(/\r?\n/g, " ");  // 去换行
 }
 
 $("run").onclick = () => {
@@ -84,6 +85,7 @@ $("run").onclick = () => {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1});
 
+    // 👉 解析 A-B
     const map = {};
     mapText.split("\n").forEach(line=>{
       if(!line.includes("-")) return;
@@ -103,26 +105,31 @@ $("run").onclick = () => {
       if(!map[key]) continue;
 
       const newRow = [
-        todayFull(),
-        "14430257",
-        "028",
-        "2",
-        toStr(map[key]),
-        toStr(r[32]),
-        toStr(r[33]),
-        toStr(map[key]),
-        safe(r[5]),             // ⭐ 用safe
-        toStr(r[34]),
-        (parseFloat(r[6])||0).toFixed(1)
+        todayFull(),                 // A
+        "14430257",                  // B
+        "028",                       // C
+        "2",                         // D
+        toStr(map[key]),             // E
+        toStr(r[32]),                // F = AG
+        toStr(r[33]),                // G = AH
+        toStr(map[key]),             // H
+        safe(r[5]),                  // I = F
+        toStr(r[34]),                // J = AI
+        (parseFloat(r[6])||0).toFixed(1) // K = G
       ];
 
       result.push(newRow);
     }
 
-    const ws2 = XLSX.utils.aoa_to_sheet(result);
-    const csv = XLSX.utils.sheet_to_csv(ws2);
+    // ⭐ 手动生成CSV（核心：无引号）
+    const csv = result.map(row =>
+      row.map(v => safe(v)).join(",")
+    ).join("\n");
 
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;"
+    });
+
     const link = document.createElement("a");
 
     link.href = URL.createObjectURL(blob);
