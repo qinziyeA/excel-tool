@@ -8,24 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f5f7fa;
-}
-
-.main{
-  max-width:1000px;
-  margin:40px auto;
-}
-
-.card{
-  background:#fff;
-  padding:25px;
-  border-radius:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.05);
-}
-
+body{margin:0;font-family:Arial;background:#f5f7fa;}
+.main{max-width:1000px;margin:40px auto;}
+.card{background:#fff;padding:25px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.05);}
 .upload-box{
   border:2px dashed #ccc;
   padding:30px;
@@ -33,39 +18,18 @@ body{
   cursor:pointer;
   border-radius:8px;
   margin-bottom:10px;
+  transition:0.2s;
 }
-
+.upload-box:hover{border-color:#1677ff;}
 .settings{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:12px;
   margin-top:20px;
 }
-
-input{
-  padding:10px;
-  border:1px solid #ddd;
-  border-radius:6px;
-}
-
-button{
-  margin-top:20px;
-  padding:12px;
-  background:#1677ff;
-  color:white;
-  border:none;
-  border-radius:6px;
-  width:100%;
-}
-
-.log{
-  margin-top:20px;
-  background:#111827;
-  color:#d1fae5;
-  padding:12px;
-  border-radius:6px;
-  font-family:monospace;
-}
+input{padding:10px;border:1px solid #ddd;border-radius:6px;}
+button{margin-top:20px;padding:12px;background:#1677ff;color:white;border:none;border-radius:6px;width:100%;}
+.log{margin-top:20px;background:#111827;color:#d1fae5;padding:12px;border-radius:6px;font-family:monospace;}
 </style>
 </head>
 
@@ -83,11 +47,11 @@ button{
 <input id="refFile" type="file" hidden>
 
 <div class="settings">
-  <input id="addressCol" value="F" placeholder="地址列">
-  <input id="phoneCol" value="C" placeholder="手机号列">
-  <input id="startRow" value="1" placeholder="开始行">
-  <input id="zipCol" value="E" placeholder="邮编输出列">
-  <input id="sortCodeCol" value="U" placeholder="分拣码输出列">
+<input id="addressCol" value="F">
+<input id="phoneCol" value="C">
+<input id="startRow" value="1">
+<input id="zipCol" value="E">
+<input id="sortCodeCol" value="U">
 </div>
 
 <button id="runBtn">开始处理</button>
@@ -98,13 +62,11 @@ button{
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
-function log(msg){
-  $("log").textContent += "\n" + msg;
-}
+function log(msg){$("log").textContent+="\n"+msg;}
 
-// 列字母 → 索引
+// 列字母转索引
 function colIndex(letter){
   let n=0;
   for(let i=0;i<letter.length;i++){
@@ -117,11 +79,11 @@ function colIndex(letter){
 function normalizePhone(v){
   if(!v) return "00000000";
   v=String(v).trim();
-  if(!v.startsWith("+")) return v;
-  return v.slice(3);
+  if(v.startsWith("+")) return v.slice(3);
+  return v;
 }
 
-// ⭐地址处理（你的最终逻辑）
+// 地址截取（你要求的逻辑）
 function trimAddress(addr){
   if(!addr) return "";
   addr=addr.replace(/\s/g,"");
@@ -139,24 +101,40 @@ function trimAddress(addr){
   return addr;
 }
 
-// 拖拽支持
+// ⭐ 关键：安全拖拽绑定
 function bindUpload(box,input){
-  box.onclick=()=>input.click();
 
-  box.ondragover=e=>{
+  box.addEventListener("click",()=>input.click());
+
+  box.addEventListener("dragover",e=>{
     e.preventDefault();
     box.style.borderColor="#1677ff";
-  };
+  });
 
-  box.ondragleave=()=>{
+  box.addEventListener("dragleave",()=>{
     box.style.borderColor="#ccc";
-  };
+  });
 
-  box.ondrop=e=>{
+  box.addEventListener("drop",e=>{
     e.preventDefault();
     box.style.borderColor="#ccc";
-    input.files=e.dataTransfer.files;
-  };
+
+    const files=e.dataTransfer.files;
+    if(files.length>0){
+      // ⭐ 用 DataTransfer 解决浏览器限制
+      const dt=new DataTransfer();
+      dt.items.add(files[0]);
+      input.files=dt.files;
+
+      box.textContent="已选择: "+files[0].name;
+    }
+  });
+
+  input.addEventListener("change",()=>{
+    if(input.files.length>0){
+      box.textContent="已选择: "+input.files[0].name;
+    }
+  });
 }
 
 bindUpload($("targetBox"),$("targetFile"));
@@ -172,52 +150,45 @@ $("runBtn").onclick=async()=>{
     return;
   }
 
-  log("开始处理...");
+  log("读取文件...");
 
-  // 读取黑猫
-  const refData=await ref.arrayBuffer();
-  const refWb=XLSX.read(refData,{type:"array"});
-  const refWs=refWb.Sheets["Sheet1"];
-  const refRows=XLSX.utils.sheet_to_json(refWs,{header:1});
+  const read=async file=>{
+    const data=await file.arrayBuffer();
+    return XLSX.read(data,{type:"array"});
+  };
 
-  // 建立地址map
+  const targetWb=await read(target);
+  const refWb=await read(ref);
+
+  let targetRows=XLSX.utils.sheet_to_json(targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
+  let refRows=XLSX.utils.sheet_to_json(refWb.Sheets[refWb.SheetNames[0]],{header:1});
+
+  // 黑猫索引
   const map={};
   for(let i=1;i<refRows.length;i++){
     let r=refRows[i];
     if(!r) continue;
 
-    let addr=trimAddress(r[4]);
-    map[addr]={
+    map[trimAddress(r[4])] = {
       zip:r[0],
       code:r[1]
     };
   }
 
-  log("黑猫数据读取完成");
-
-  // 读取东京菜鸟
-  const data=await target.arrayBuffer();
-  const wb=XLSX.read(data,{type:"array"});
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  let rows=XLSX.utils.sheet_to_json(ws,{header:1});
-
-  const phoneCol=colIndex($("phoneCol").value);
   const addrCol=colIndex($("addressCol").value);
+  const phoneCol=colIndex($("phoneCol").value);
   const zipCol=colIndex($("zipCol").value);
   const sortCol=colIndex($("sortCodeCol").value);
   const startRow=parseInt($("startRow").value)-1;
 
-  for(let i=startRow;i<rows.length;i++){
-    let r=rows[i];
+  for(let i=startRow;i<targetRows.length;i++){
+    let r=targetRows[i];
     if(!r) continue;
 
-    // 手机号
     r[phoneCol]=normalizePhone(r[phoneCol]);
 
-    // 邮编为空才匹配
     if(!r[zipCol]){
       let addr=trimAddress(r[addrCol]);
-
       if(map[addr]){
         r[zipCol]=map[addr].zip;
         r[sortCol]=map[addr].code;
@@ -225,10 +196,10 @@ $("runBtn").onclick=async()=>{
     }
   }
 
-  log("数据处理完成");
+  log("处理完成");
 
-  // ⭐导出 CSV（SJIS防乱码）
-  const newWs=XLSX.utils.aoa_to_sheet(rows);
+  // ⭐ 导出SJIS CSV（日本系统用）
+  const newWs=XLSX.utils.aoa_to_sheet(targetRows);
   const csv=XLSX.utils.sheet_to_csv(newWs);
 
   const sjis=Encoding.convert(csv,{
@@ -244,7 +215,7 @@ $("runBtn").onclick=async()=>{
   link.download="result.csv";
   link.click();
 
-  log("导出完成！");
+  log("导出完成");
 };
 </script>
 
