@@ -1,277 +1,413 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>データ修正ツール</title>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
-
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f5f7fa;
-}
-.main{
-  max-width:1000px;
-  margin:40px auto;
-}
-.card{
-  background:#fff;
-  padding:25px;
-  border-radius:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,.05);
-}
-.upload-box{
-  border:2px dashed #ccc;
-  padding:30px;
-  text-align:center;
-  cursor:pointer;
-  border-radius:8px;
-  margin-bottom:10px;
-}
-.settings{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:12px;
-  margin-top:20px;
-}
-input{
-  padding:10px;
-  border:1px solid #ddd;
-  border-radius:6px;
-}
-button{
-  margin-top:20px;
-  padding:12px;
-  background:#1677ff;
-  color:white;
-  border:none;
-  border-radius:6px;
-  width:100%;
-}
-.log{
-  margin-top:20px;
-  background:#111827;
-  color:#d1fae5;
-  padding:12px;
-  border-radius:6px;
-  font-family:monospace;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>东京菜鸟表处理工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 24px;
+      color: #222;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    h1 { margin-top: 0; font-size: 24px; }
+    .note {
+      background: #fff8e5;
+      border-left: 5px solid #f0b429;
+      padding: 12px 16px;
+      border-radius: 8px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="file"], select, input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      background: #fff;
+    }
+    .settings {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .log {
+      margin-top: 18px;
+      padding: 14px;
+      background: #111827;
+      color: #d1fae5;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      min-height: 110px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+    .small { color: #666; font-size: 13px; line-height: 1.5; }
+    @media (max-width: 800px) {
+      .grid, .settings { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="container">
+    <h1>东京菜鸟表处理工具</h1>
+    <div class="note">
+      <b>用途：</b>上传需要处理的东京菜鸟表 + 黑猫参照表。工具会修剪地址、匹配黑猫表邮编/分拣码，并处理手机号。所有处理都在浏览器本地完成，不会上传到服务器。
+    </div>
 
-<div class="main">
-<div class="card">
+    <div class="grid">
+      <div class="card">
+        <label>① 东京菜鸟表（需要修改的文件）</label>
+        <input id="targetFile" type="file" accept=".xlsx,.xls,.csv" />
+        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；地址只在E列邮编为空时用于匹配，不会写回；匹配结果写入E列和U列。</p>
+      </div>
+      <div class="card">
+        <label>② 黑猫参照表</label>
+        <input id="refFile" type="file" accept=".xlsx,.xls" />
+        <p class="small">默认读取 Sheet1。要求：A列=邮编，B列=分拣码，E列=完整地址。</p>
+      </div>
+    </div>
 
-<h2>データ修正ツール</h2>
+    <div class="settings">
+      <div>
+        <label>东京菜鸟：原始地址列</label>
+        <input id="addressCol" type="text" value="F" />
+      </div>
+      <div>
+        <label>东京菜鸟：手机号列（原地修改）</label>
+        <input id="phoneCol" type="text" value="C" />
+      </div>
+      <div>
+        <label>开始行</label>
+        <input id="startRow" type="text" value="1" />
+      </div>
+      <div>
+        <label>输出：黑猫A列邮编 → 菜鸟列</label>
+        <input id="zipCol" type="text" value="E" />
+      </div>
+      <div>
+        <label>输出：黑猫B列分拣码 → 菜鸟列</label>
+        <input id="sortCodeCol" type="text" value="U" />
+      </div>
+    </div>
 
-<div id="targetBox" class="upload-box">拖拽或点击上传东京菜鸟表</div>
-<input id="targetFile" type="file" hidden>
-
-<div id="refBox" class="upload-box">拖拽或点击上传黑猫参照表</div>
-<input id="refFile" type="file" hidden>
-
-<div class="settings">
-  <input id="addressCol" value="F">
-  <input id="phoneCol" value="C">
-  <input id="startRow" value="1">
-  <input id="zipCol" value="E">
-  <input id="sortCodeCol" value="U">
-</div>
-
-<button id="runBtn">开始处理</button>
-
-<div id="log" class="log">等待上传文件...</div>
-
-</div>
-</div>
+    <button id="runBtn">开始处理并下载结果</button>
+    <div id="log" class="log">等待上传文件...</div>
+  </div>
 
 <script>
-const $ = id => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
 
-function log(msg){
-  $("log").textContent += "\n" + msg;
-}
-
-// 列字母 → 索引
-function colIndex(letter){
-  let n=0;
-  for(let i=0;i<letter.length;i++){
-    n=n*26+letter.charCodeAt(i)-64;
-  }
-  return n-1;
-}
-
-// ⭐ 防科学计数法
-function forceTextIfNeeded(value){
-  if(value===undefined||value===null) return "";
-  value = String(value);
-  if(/^\d{10,}$/.test(value)){
-    return '="'+value+'"';
-  }
-  return value;
-}
-
-// 手机号处理
-function normalizePhone(v){
-  if(!v) return "00000000";
-  v=String(v).trim();
-  if(v.startsWith("+")) return v.slice(3);
-  return v;
-}
-
-// ⭐ 地址逻辑（保持你原思路）
-function trimAddress(addr){
-  if(!addr) return "";
-  addr=addr.replace(/\s/g,"");
-
-  const cityMatch=addr.match(/(市|区|町|郡)/);
-  if(cityMatch){
-    return addr.slice(cityMatch.index+1);
+  function log(message) {
+    $("log").textContent += "\n" + message;
   }
 
-  const prefMatch=addr.match(/(都|道|府|県)/);
-  if(prefMatch){
-    return addr.slice(prefMatch.index+1);
+  function resetLog(message) {
+    $("log").textContent = message;
   }
 
-  return addr;
-}
-
-// 拖拽绑定（修复版）
-function bindUpload(box,input){
-
-  box.addEventListener("click",()=>input.click());
-
-  box.addEventListener("dragover",e=>{
-    e.preventDefault();
-    box.style.borderColor="#1677ff";
-  });
-
-  box.addEventListener("dragleave",()=>{
-    box.style.borderColor="#ccc";
-  });
-
-  box.addEventListener("drop",e=>{
-    e.preventDefault();
-    box.style.borderColor="#ccc";
-
-    const files=e.dataTransfer.files;
-    if(files.length>0){
-      const dt=new DataTransfer();
-      dt.items.add(files[0]);
-      input.files=dt.files;
-
-      box.textContent="已选择: "+files[0].name;
+  function colLetterToIndex(letter) {
+    const s = String(letter).trim().toUpperCase();
+    let n = 0;
+    for (let i = 0; i < s.length; i++) {
+      const code = s.charCodeAt(i);
+      if (code < 65 || code > 90) throw new Error("列名不正确: " + letter);
+      n = n * 26 + (code - 64);
     }
-  });
+    return n - 1;
+  }
 
-  input.addEventListener("change",()=>{
-    if(input.files.length>0){
-      box.textContent="已选择: "+input.files[0].name;
+  function getCell(row, colIndex) {
+    const v = row[colIndex];
+    return v == null ? "" : String(v).trim();
+  }
+
+  function cleanSpaces(value) {
+    return String(value == null ? "" : value)
+      .replace(/\u3000/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+  }
+
+  function findFromSecondCharAfterPrefecture(s, chars) {
+    const prefectureMarks = ["県", "都", "府", "道"];
+    let p = -1;
+    for (const mark of prefectureMarks) {
+      const i = s.indexOf(mark);
+      if (i >= 0 && (p < 0 || i < p)) p = i;
     }
-  });
-}
 
-bindUpload($("targetBox"),$("targetFile"));
-bindUpload($("refBox"),$("refFile"));
+    // 关键规则：无视都道府県后面出现的第一个字。
+    // 例：千葉県市原市 -> 从「市原市」的第二个字符开始找，所以会命中后面的「市」。
+    const start = p >= 0 ? p + 2 : 0;
 
-$("runBtn").onclick=async()=>{
-
-  const target=$("targetFile").files[0];
-  const ref=$("refFile").files[0];
-
-  if(!target||!ref){
-    alert("请上传文件");
-    return;
+    let best = -1;
+    for (const ch of chars) {
+      const idx = s.indexOf(ch, start);
+      if (idx >= 0 && (best < 0 || idx < best)) best = idx;
+    }
+    return best;
   }
 
-  log("读取文件...");
+  function trimJapaneseAddress(value) {
+    const s = cleanSpaces(value);
+    if (!s) return "";
 
-  const read=async file=>{
-    const data=await file.arrayBuffer();
-    return XLSX.read(data,{type:"array"});
-  };
+    // 先找区/町；找不到再找市/郡
+    let pos = findFromSecondCharAfterPrefecture(s, ["区", "町"]);
+    if (pos < 0) pos = findFromSecondCharAfterPrefecture(s, ["市", "郡"]);
 
-  const targetWb=await read(target);
-  const refWb=await read(ref);
-
-  let targetRows=XLSX.utils.sheet_to_json(
-    targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
-
-  let refRows=XLSX.utils.sheet_to_json(
-    refWb.Sheets[refWb.SheetNames[0]],{header:1});
-
-  // 黑猫索引
-  const map={};
-  for(let i=1;i<refRows.length;i++){
-    let r=refRows[i];
-    if(!r) continue;
-
-    map[trimAddress(r[4])] = {
-      zip:r[0],
-      code:r[1]
-    };
+    return pos >= 0 ? s.slice(0, pos + 1) : s;
   }
 
-  const addrCol=colIndex($("addressCol").value);
-  const phoneCol=colIndex($("phoneCol").value);
-  const zipCol=colIndex($("zipCol").value);
-  const sortCol=colIndex($("sortCodeCol").value);
-  const startRow=parseInt($("startRow").value)-1;
+  function normalizePhone(value) {
+    const s = String(value == null ? "" : value).replace(/\s+/g, "");
+    if (!s) return "00000000";
+    if (!s.startsWith("+")) return s;
+    if (s.length <= 3) return "00000000";
+    return s.slice(3);
+  }
 
-  for(let i=startRow;i<targetRows.length;i++){
-    let r=targetRows[i];
-    if(!r) continue;
+  function readWorkbook(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          resolve(XLSX.read(data, { type: "array", raw: true, cellText: false, cellDates: false }));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
 
-    // ⭐ 手机号处理 + 防E+11
-    r[phoneCol]=forceTextIfNeeded(normalizePhone(r[phoneCol]));
+  function readTargetWorkbook(file) {
+    const isCsv = /\.csv$/i.test(file.name);
+    if (!isCsv) return readWorkbook(file);
 
-    if(!r[zipCol]){
-      let addr=trimAddress(r[addrCol]);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target.result;
+          let text;
 
-      if(map[addr]){
-        r[zipCol]=map[addr].zip;
-        r[sortCol]=map[addr].code;
+          try {
+            text = new TextDecoder("shift-jis").decode(buffer);
+          } catch (_) {
+            text = new TextDecoder("utf-8").decode(buffer);
+          }
+
+          const wb = XLSX.read(text, { type: "string", raw: true });
+          resolve(wb);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function buildReferenceIndex(refRows) {
+    // 黑猫表：A列=邮编, B列=分拣码, E列=完整地址
+    const index = [];
+    for (let i = 0; i < refRows.length; i++) {
+      const row = refRows[i];
+      const zip = getCell(row, 0);
+      const sortCode = getCell(row, 1);
+      const fullAddress = cleanSpaces(getCell(row, 4));
+      if (!fullAddress) continue;
+      index.push({ fullAddress, zip, sortCode, rowNumber: i + 1 });
+    }
+    return index;
+  }
+
+  function lookupByPrefix(trimmedAddress, refIndex) {
+    if (!trimmedAddress) return null;
+    for (const item of refIndex) {
+      if (item.fullAddress.startsWith(trimmedAddress)) {
+        return item;
       }
     }
+    return null;
   }
 
-  log("处理完成");
+  $("runBtn").addEventListener("click", async () => {
+    try {
+      resetLog("处理中...");
 
-  // ⭐ 导出CSV（关键修复）
-  const newWs=XLSX.utils.aoa_to_sheet(targetRows);
+      const targetFile = $("targetFile").files[0];
+      const refFile = $("refFile").files[0];
+      if (!targetFile || !refFile) {
+        alert("请先上传东京菜鸟表和黑猫参照表。");
+        resetLog("等待上传文件...");
+        return;
+      }
 
-  const csv=XLSX.utils.sheet_to_csv(newWs);
+      const addressCol = colLetterToIndex($("addressCol").value);
+      const phoneCol = colLetterToIndex($("phoneCol").value);
+      const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
+      const zipCol = colLetterToIndex($("zipCol").value);
+      const sortCodeCol = colLetterToIndex($("sortCodeCol").value);
 
-  // ⭐ 全局防科学计数法
-  const safeCsv = csv.replace(
-    /(^|,)(\d{10,})(?=,|$)/g,
-    (m,p1,p2)=>`${p1}="${p2}"`
-  );
+      log("读取东京菜鸟表...");
+      const targetWb = await readTargetWorkbook(targetFile);
+      const targetSheetName = targetWb.SheetNames[0];
+      const targetWs = targetWb.Sheets[targetSheetName];
+      const targetRows = XLSX.utils.sheet_to_json(targetWs, { header: 1, raw: false, defval: "" });
 
-  const sjisArray=Encoding.convert(safeCsv,{
-    to:"SJIS",
-    from:"UNICODE",
-    type:"array"
+      log("读取黑猫参照表...");
+      const refWb = await readWorkbook(refFile);
+      const refSheetName = refWb.SheetNames.includes("Sheet1") ? "Sheet1" : refWb.SheetNames[0];
+      const refWs = refWb.Sheets[refSheetName];
+      const refRows = XLSX.utils.sheet_to_json(refWs, { header: 1, raw: false, defval: "" });
+
+      log("建立黑猫地址索引...");
+      const refIndex = buildReferenceIndex(refRows);
+      log("黑猫参照地址数量: " + refIndex.length);
+
+      let matched = 0;
+      let unmatched = 0;
+      let skippedExistingZip = 0;
+      let processed = 0;
+
+      for (let r = startRow; r < targetRows.length; r++) {
+        const row = targetRows[r];
+        if (!row || row.length === 0) continue;
+
+        const originalAddress = getCell(row, addressCol);
+        const phone = getCell(row, phoneCol);
+
+        // 手机号：空白补00000000；不是+开头则原样保留；+开头才删除前3位。
+        row[phoneCol] = normalizePhone(phone);
+
+        // 如果菜鸟表E列已有邮编，就不再修剪地址、不重新匹配、不覆盖E/U列。
+        const existingZip = getCell(row, zipCol);
+        if (existingZip) {
+          skippedExistingZip++;
+          processed++;
+          continue;
+        }
+
+        const trimmed = trimJapaneseAddress(originalAddress);
+        const hit = lookupByPrefix(trimmed, refIndex);
+        if (hit) {
+          row[zipCol] = hit.zip;
+          row[sortCodeCol] = hit.sortCode;
+          matched++;
+        } else {
+          row[zipCol] = "";
+          row[sortCodeCol] = "";
+          unmatched++;
+        }
+        processed++;
+      }
+
+      log("处理完成。总行数: " + processed);
+      log("匹配成功: " + matched);
+      log("已有邮编跳过: " + skippedExistingZip);
+      log("未匹配: " + unmatched);
+
+      const newWs = XLSX.utils.aoa_to_sheet(targetRows);
+
+      // 强制所有单元格按文本写出，尽量避免 Excel 打开时删除首位 0。
+      Object.keys(newWs).forEach((addr) => {
+        if (addr[0] === "!") return;
+        const cell = newWs[addr];
+        if (cell && cell.v != null) {
+          cell.t = "s";
+          cell.v = String(cell.v);
+          cell.w = String(cell.v);
+        }
+      });
+      targetWb.Sheets[targetSheetName] = newWs;
+
+      const baseName = targetFile.name.replace(/\.(csv|xlsx|xls)$/i, "");
+const outputName = baseName + "_processed.csv";
+
+// 👉 关键1：确保手机号是字符串（防止丢0）
+for (let r = startRow; r < targetRows.length; r++) {
+  const row = targetRows[r];
+  if (!row) continue;
+
+  if (row[phoneCol]) {
+    row[phoneCol] = String(row[phoneCol]);
+  }
+}
+
+// 👉 关键2：生成 CSV
+const csv = XLSX.utils.sheet_to_csv(newWs);
+
+// 👉 关键3：下载（UTF-8，无 BOM，适合你用 gpad）
+// 👉 UTF-8 → SJIS 转换（关键）
+const sjisArray = Encoding.convert(csv, {
+  to: "SJIS",
+  from: "UNICODE",
+  type: "array"
+});
+
+const blob = new Blob([new Uint8Array(sjisArray)], {
+  type: "text/csv"
+});
+
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = outputName;
+link.click();
+      log("已生成下载文件: " + outputName);
+    } catch (err) {
+      console.error(err);
+      resetLog("出错了：\n" + err.message);
+    }
   });
-
-  const blob=new Blob([new Uint8Array(sjisArray)],{
-    type:"text/csv"
-  });
-
-  const link=document.createElement("a");
-  link.href=URL.createObjectURL(blob);
-  link.download="result.csv";
-  link.click();
-
-  log("导出完成");
-};
 </script>
-
 </body>
 </html>
