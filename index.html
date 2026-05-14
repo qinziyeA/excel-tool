@@ -1,51 +1,113 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>データ修正＆検証ツール</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
 
 <style>
-body { margin:0; font-family:Arial; background:#f5f7fa;}
-.sidebar{width:220px;height:100vh;background:#fff;border-right:1px solid #eee;position:fixed;}
-.sidebar h2{padding:20px;}
-.sidebar li{list-style:none;padding:12px 20px;}
-.sidebar li.active{background:#e6f0ff;color:#1677ff;}
-.main{margin-left:220px;padding:30px;}
-.card{background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.05);}
-.upload-box{border:2px dashed #ccc;padding:40px;text-align:center;border-radius:8px;cursor:pointer;}
-.settings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;}
-input{padding:10px;border:1px solid #ddd;border-radius:6px;}
-button{margin-top:20px;padding:12px;background:#1677ff;color:#fff;border:none;border-radius:6px;}
-.log{margin-top:20px;background:#111827;color:#d1fae5;padding:12px;border-radius:6px;font-family:monospace;white-space:pre-wrap;}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fa;
+}
+
+/* 顶部标题 */
+.header {
+  background: #fff;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 主体 */
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+}
+
+/* 卡片 */
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* 上传 */
+.upload-box {
+  border: 2px dashed #ccc;
+  padding: 40px;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #888;
+}
+
+/* 输入 */
+.settings {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+/* 按钮 */
+button {
+  margin-top: 20px;
+  padding: 12px;
+  background: #1677ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* log */
+.log {
+  margin-top: 20px;
+  background: #111827;
+  color: #d1fae5;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  white-space: pre-wrap;
+}
 </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-<h2>espoirer</h2>
-<ul>
-<li>状況確認</li>
-<li>通関関係</li>
-<li class="active">データ修正</li>
-</ul>
+<div class="header">
+データ修正＆検証ツール
 </div>
 
-<div class="main">
+<div class="container">
 <div class="card">
 
-<h2>データ修正＆検証ツール</h2>
-
-<div onclick="targetFile.click()" class="upload-box">上传东京菜鸟表</div>
+<!-- 上传 -->
+<div onclick="targetFile.click()" class="upload-box">
+上传东京菜鸟表
+</div>
 <input id="targetFile" type="file" style="display:none">
 
-<div onclick="refFile.click()" class="upload-box" style="margin-top:10px;">上传黑猫参照表</div>
+<div onclick="refFile.click()" class="upload-box" style="margin-top:10px;">
+上传黑猫参照表
+</div>
 <input id="refFile" type="file" style="display:none">
 
+<!-- 参数 -->
 <div class="settings">
 <input id="addressCol" value="F">
 <input id="phoneCol" value="C">
@@ -81,36 +143,26 @@ if(v.startsWith("+")) return v.slice(3);
 return v;
 }
 
-// 🔥 完整地址截取（恢复你的逻辑）
 function trimAddress(addr){
 if(!addr) return "";
 addr=addr.replace(/\s/g,"");
 
-const prefRegex=/(都|道|府|県)/;
-let idx=addr.search(prefRegex);
+const pref=addr.search(/(都|道|府|県)/);
+if(pref===-1) return addr;
 
-if(idx===-1) return addr;
+let sub=addr.slice(pref+1);
+const city=sub.search(/(市|区|町|郡)/);
 
-let sub=addr.slice(idx+1);
-
-const cityRegex=/(市|区|町|郡)/;
-let cityIdx=sub.search(cityRegex);
-
-if(cityIdx!==-1){
-return sub.slice(cityIdx+1);
-}
-return sub;
+return city!==-1 ? sub.slice(city+1) : sub;
 }
 
-// 🔥 CSV读取（支持SJIS）
 function readFile(file){
 return new Promise(resolve=>{
-const reader=new FileReader();
-
-reader.onload=e=>{
+const r=new FileReader();
+r.onload=e=>{
 let data=new Uint8Array(e.target.result);
-
 let wb;
+
 try{
 wb=XLSX.read(data,{type:"array"});
 }catch{
@@ -119,8 +171,7 @@ wb=XLSX.read(str,{type:"string"});
 }
 resolve(wb);
 };
-
-reader.readAsArrayBuffer(file);
+r.readAsArrayBuffer(file);
 });
 }
 
@@ -139,11 +190,8 @@ log("读取文件...");
 const targetWb=await readFile(target);
 const refWb=await readFile(ref);
 
-let targetRows=XLSX.utils.sheet_to_json(
-targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
-
-let refRows=XLSX.utils.sheet_to_json(
-refWb.Sheets[refWb.SheetNames[0]],{header:1});
+let targetRows=XLSX.utils.sheet_to_json(targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
+let refRows=XLSX.utils.sheet_to_json(refWb.Sheets[refWb.SheetNames[0]],{header:1});
 
 const refIndex=refRows.map(r=>({
 zip:r[0],
@@ -163,17 +211,14 @@ for(let i=startRow;i<targetRows.length;i++){
 let r=targetRows[i];
 if(!r) continue;
 
-// 手机号
 r[phoneCol]=normalizePhone(r[phoneCol]);
 
-// 已有邮编跳过
 if(r[zipCol]){
 skip++;
 continue;
 }
 
 let addr=trimAddress(r[addrCol]);
-
 let hit=refIndex.find(x=>x.addr && addr.startsWith(x.addr));
 
 if(hit){
