@@ -2,108 +2,92 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>データ修正＆検証ツール</title>
+<title>データ修正ツール</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f5f7fa;
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f5f7fa;
 }
 
-.header {
-  background: #fff;
-  padding: 16px 24px;
-  border-bottom: 1px solid #eee;
-  font-weight: bold;
+.main{
+  max-width:1000px;
+  margin:40px auto;
 }
 
-.container {
-  max-width: 900px;
-  margin: 30px auto;
+.card{
+  background:#fff;
+  padding:25px;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
 
-.card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+.upload-box{
+  border:2px dashed #ccc;
+  padding:30px;
+  text-align:center;
+  cursor:pointer;
+  border-radius:8px;
+  margin-bottom:10px;
 }
 
-.upload-box {
-  border: 2px dashed #ccc;
-  padding: 40px;
-  text-align: center;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #888;
-  transition: all 0.2s;
+.settings{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:20px;
 }
 
-.upload-box.dragover {
-  border-color: #1677ff;
-  background: #f0f7ff;
+input{
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
 }
 
-.settings {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 12px;
-  margin-top: 20px;
+button{
+  margin-top:20px;
+  padding:12px;
+  background:#1677ff;
+  color:white;
+  border:none;
+  border-radius:6px;
+  width:100%;
 }
 
-input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-button {
-  margin-top: 20px;
-  padding: 12px;
-  background: #1677ff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.log {
-  margin-top: 20px;
-  background: #111827;
-  color: #d1fae5;
-  padding: 12px;
-  border-radius: 6px;
-  font-family: monospace;
-  white-space: pre-wrap;
+.log{
+  margin-top:20px;
+  background:#111827;
+  color:#d1fae5;
+  padding:12px;
+  border-radius:6px;
+  font-family:monospace;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">データ修正＆検証ツール</div>
-
-<div class="container">
+<div class="main">
 <div class="card">
 
-<div class="upload-box" id="box1">拖拽或点击上传东京菜鸟表</div>
-<input id="targetFile" type="file" style="display:none">
+<h2>データ修正ツール</h2>
 
-<div class="upload-box" id="box2" style="margin-top:10px;">拖拽或点击上传黑猫参照表</div>
-<input id="refFile" type="file" style="display:none">
+<div id="targetBox" class="upload-box">拖拽或点击上传东京菜鸟表</div>
+<input id="targetFile" type="file" hidden>
+
+<div id="refBox" class="upload-box">拖拽或点击上传黑猫参照表</div>
+<input id="refFile" type="file" hidden>
 
 <div class="settings">
-<input id="addressCol" value="F">
-<input id="phoneCol" value="C">
-<input id="startRow" value="1">
-<input id="zipCol" value="E">
-<input id="sortCodeCol" value="U">
+  <input id="addressCol" value="F" placeholder="地址列">
+  <input id="phoneCol" value="C" placeholder="手机号列">
+  <input id="startRow" value="1" placeholder="开始行">
+  <input id="zipCol" value="E" placeholder="邮编输出列">
+  <input id="sortCodeCol" value="U" placeholder="分拣码输出列">
 </div>
 
 <button id="runBtn">开始处理</button>
@@ -114,164 +98,153 @@ button {
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-function log(t){$("log").textContent+="\n"+t;}
-
-function colIndex(l){
-let n=0;
-for(let i=0;i<l.length;i++){
-n=n*26+l.charCodeAt(i)-64;
-}
-return n-1;
+function log(msg){
+  $("log").textContent += "\n" + msg;
 }
 
+// 列字母 → 索引
+function colIndex(letter){
+  let n=0;
+  for(let i=0;i<letter.length;i++){
+    n=n*26+letter.charCodeAt(i)-64;
+  }
+  return n-1;
+}
+
+// 手机号处理
 function normalizePhone(v){
-if(!v) return "00000000";
-v=String(v).trim();
-if(v.startsWith("+")) return v.slice(3);
-return v;
+  if(!v) return "00000000";
+  v=String(v).trim();
+  if(!v.startsWith("+")) return v;
+  return v.slice(3);
 }
 
+// ⭐地址处理（你的最终逻辑）
 function trimAddress(addr){
-if(!addr) return "";
-addr=addr.replace(/\s/g,"");
+  if(!addr) return "";
+  addr=addr.replace(/\s/g,"");
 
-const pref=addr.search(/(都|道|府|県)/);
-if(pref===-1) return addr;
+  const cityMatch=addr.match(/(市|区|町|郡)/);
+  if(cityMatch){
+    return addr.slice(cityMatch.index+1);
+  }
 
-let sub=addr.slice(pref+1);
-const city=sub.search(/(市|区|町|郡)/);
+  const prefMatch=addr.match(/(都|道|府|県)/);
+  if(prefMatch){
+    return addr.slice(prefMatch.index+1);
+  }
 
-return city!==-1 ? sub.slice(city+1) : sub;
+  return addr;
 }
 
-function readFile(file){
-return new Promise(resolve=>{
-const r=new FileReader();
-r.onload=e=>{
-let data=new Uint8Array(e.target.result);
-let wb;
+// 拖拽支持
+function bindUpload(box,input){
+  box.onclick=()=>input.click();
 
-try{
-wb=XLSX.read(data,{type:"array"});
-}catch{
-const str=Encoding.convert(data,{to:"UNICODE",from:"SJIS",type:"string"});
-wb=XLSX.read(str,{type:"string"});
-}
-resolve(wb);
-};
-r.readAsArrayBuffer(file);
-});
-}
+  box.ondragover=e=>{
+    e.preventDefault();
+    box.style.borderColor="#1677ff";
+  };
 
-// 拖拽功能
-function enableDrag(boxId,inputId){
-const box=$(boxId);
-const input=$(inputId);
+  box.ondragleave=()=>{
+    box.style.borderColor="#ccc";
+  };
 
-box.onclick=()=>input.click();
-
-box.addEventListener("dragover",e=>{
-e.preventDefault();
-box.classList.add("dragover");
-});
-
-box.addEventListener("dragleave",()=>{
-box.classList.remove("dragover");
-});
-
-box.addEventListener("drop",e=>{
-e.preventDefault();
-box.classList.remove("dragover");
-
-const files=e.dataTransfer.files;
-if(files.length){
-input.files=files;
-box.textContent="已选择: "+files[0].name;
-}
-});
+  box.ondrop=e=>{
+    e.preventDefault();
+    box.style.borderColor="#ccc";
+    input.files=e.dataTransfer.files;
+  };
 }
 
-enableDrag("box1","targetFile");
-enableDrag("box2","refFile");
+bindUpload($("targetBox"),$("targetFile"));
+bindUpload($("refBox"),$("refFile"));
 
 $("runBtn").onclick=async()=>{
 
-const target=$("targetFile").files[0];
-const ref=$("refFile").files[0];
+  const target=$("targetFile").files[0];
+  const ref=$("refFile").files[0];
 
-if(!target||!ref){
-alert("请上传文件");
-return;
-}
+  if(!target||!ref){
+    alert("请上传文件");
+    return;
+  }
 
-log("读取文件...");
+  log("开始处理...");
 
-const targetWb=await readFile(target);
-const refWb=await readFile(ref);
+  // 读取黑猫
+  const refData=await ref.arrayBuffer();
+  const refWb=XLSX.read(refData,{type:"array"});
+  const refWs=refWb.Sheets["Sheet1"];
+  const refRows=XLSX.utils.sheet_to_json(refWs,{header:1});
 
-let targetRows=XLSX.utils.sheet_to_json(targetWb.Sheets[targetWb.SheetNames[0]],{header:1});
-let refRows=XLSX.utils.sheet_to_json(refWb.Sheets[refWb.SheetNames[0]],{header:1});
+  // 建立地址map
+  const map={};
+  for(let i=1;i<refRows.length;i++){
+    let r=refRows[i];
+    if(!r) continue;
 
-const refIndex=refRows.map(r=>({
-zip:r[0],
-code:r[1],
-addr:trimAddress(r[4])
-}));
+    let addr=trimAddress(r[4]);
+    map[addr]={
+      zip:r[0],
+      code:r[1]
+    };
+  }
 
-const addrCol=colIndex($("addressCol").value);
-const phoneCol=colIndex($("phoneCol").value);
-const zipCol=colIndex($("zipCol").value);
-const sortCol=colIndex($("sortCodeCol").value);
-const startRow=parseInt($("startRow").value)-1;
+  log("黑猫数据读取完成");
 
-let ok=0,fail=0,skip=0;
+  // 读取东京菜鸟
+  const data=await target.arrayBuffer();
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  let rows=XLSX.utils.sheet_to_json(ws,{header:1});
 
-for(let i=startRow;i<targetRows.length;i++){
-let r=targetRows[i];
-if(!r) continue;
+  const phoneCol=colIndex($("phoneCol").value);
+  const addrCol=colIndex($("addressCol").value);
+  const zipCol=colIndex($("zipCol").value);
+  const sortCol=colIndex($("sortCodeCol").value);
+  const startRow=parseInt($("startRow").value)-1;
 
-r[phoneCol]=normalizePhone(r[phoneCol]);
+  for(let i=startRow;i<rows.length;i++){
+    let r=rows[i];
+    if(!r) continue;
 
-if(r[zipCol]){
-skip++;
-continue;
-}
+    // 手机号
+    r[phoneCol]=normalizePhone(r[phoneCol]);
 
-let addr=trimAddress(r[addrCol]);
-let hit=refIndex.find(x=>x.addr && addr.startsWith(x.addr));
+    // 邮编为空才匹配
+    if(!r[zipCol]){
+      let addr=trimAddress(r[addrCol]);
 
-if(hit){
-r[zipCol]=hit.zip;
-r[sortCol]=hit.code;
-ok++;
-}else{
-fail++;
-}
-}
+      if(map[addr]){
+        r[zipCol]=map[addr].zip;
+        r[sortCol]=map[addr].code;
+      }
+    }
+  }
 
-log("成功："+ok);
-log("失败："+fail);
-log("跳过："+skip);
+  log("数据处理完成");
 
-const newWs=XLSX.utils.aoa_to_sheet(targetRows);
-const csv=XLSX.utils.sheet_to_csv(newWs);
+  // ⭐导出 CSV（SJIS防乱码）
+  const newWs=XLSX.utils.aoa_to_sheet(rows);
+  const csv=XLSX.utils.sheet_to_csv(newWs);
 
-const sjis=Encoding.convert(csv,{
-to:"SJIS",
-from:"UNICODE",
-type:"array"
-});
+  const sjis=Encoding.convert(csv,{
+    to:"SJIS",
+    from:"UNICODE",
+    type:"array"
+  });
 
-const blob=new Blob([new Uint8Array(sjis)],{type:"text/csv"});
-const link=document.createElement("a");
+  const blob=new Blob([new Uint8Array(sjis)],{type:"text/csv"});
+  const link=document.createElement("a");
 
-link.href=URL.createObjectURL(blob);
-link.download="result.csv";
-link.click();
+  link.href=URL.createObjectURL(blob);
+  link.download="result.csv";
+  link.click();
 
-log("完成");
+  log("导出完成！");
 };
 </script>
 
