@@ -370,8 +370,28 @@
       targetWb.Sheets[targetSheetName] = newWs;
 
       const baseName = targetFile.name.replace(/\.(csv|xlsx|xls)$/i, "");
-      const outputName = baseName + "_processed.xlsx";
-      XLSX.writeFile(targetWb, outputName);
+const outputName = baseName + "_processed.csv";
+
+// 👉 关键1：确保手机号是字符串（防止丢0）
+for (let r = startRow; r < targetRows.length; r++) {
+  const row = targetRows[r];
+  if (!row) continue;
+
+  if (row[phoneCol]) {
+    row[phoneCol] = String(row[phoneCol]);
+  }
+}
+
+// 👉 关键2：生成 CSV
+const csv = XLSX.utils.sheet_to_csv(newWs);
+
+// 👉 关键3：下载（UTF-8，无 BOM，适合你用 gpad）
+const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = outputName;
+link.click();
       log("已生成下载文件: " + outputName);
     } catch (err) {
       console.error(err);
