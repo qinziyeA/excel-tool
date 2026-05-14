@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>データ生成ツール</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f7fa; padding:30px; }
+.card { background:#fff; padding:20px; border-radius:10px; }
+textarea { width:100%; height:120px; margin-top:10px; }
+button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:none; }
+.log { margin-top:15px; background:#111827; color:#d1fae5; padding:10px; }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>Sheet3生成ツール</h2>
+
+<input type="file" id="file">
+
+<p>匹配数据（A-B格式）:</p>
+<textarea id="mapData" placeholder="YNE0001-123456"></textarea>
+
+<button id="run">生成CSV</button>
+
+<div id="log" class="log">等待操作...</div>
+
+</div>
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+function today(){
+  const d = new Date();
+  return d.getFullYear().toString() +
+         String(d.getMonth()+1).padStart(2,'0') +
+         String(d.getDate()).padStart(2,'0');
+}
+
+// 强制字符串（防止科学计数法）
+function toStr(v){
+  if(v===undefined || v===null) return "";
+  return String(v).replace(/\.0$/, "");
+}
+
+$("run").onclick = () => {
+
+  const file = $("file").files[0];
+  const mapText = $("mapData").value.trim();
+
+  if(!file || !mapText){
+    alert("请上传文件 + 输入匹配数据");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = e => {
+
+    const wb = XLSX.read(e.target.result, {type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+
+    // 👉 解析匹配关系
+    const map = {};
+    mapText.split("\n").forEach(line=>{
+      if(!line.includes("-")) return;
+      const [a,b] = line.trim().split("-");
+      map[a] = b;
+    });
+
+    let result = [];
+
+    for(let i=1;i<rows.length;i++){
+
+      const r = rows[i];
+      if(!r) continue;
+
+      const key = toStr(r[4]); // Sheet1 E列
+
+      if(!map[key]) continue;
+
+      const newRow = [
+        today(),            // A
+        "14430257",         // B
+        "028",              // C
+        "2",                // D
+        map[key],           // E
+        toStr(r[32]),       // F = AG
+        toStr(r[33]),       // G = AH
+        map[key],           // H
+        toStr(r[5]),        // I = F
+        toStr(r[34]),       // J = AI
+        (parseFloat(r[6])||0).toFixed(1) // K = G
+      ];
+
+      result.push(newRow);
+    }
+
+    // 👉 转CSV
+    const ws2 = XLSX.utils.aoa_to_sheet(result);
+    const csv = XLSX.utils.sheet_to_csv(ws2);
+
+    // 👉 下载
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = "Sheet3.csv";
+    link.click();
+
+    $("log").textContent = "生成完成，共 " + result.length + " 条";
+  };
+
+  reader.readAsArrayBuffer(file);
+};
+
+</script>
+
+</body>
+</html>
