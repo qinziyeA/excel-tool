@@ -386,7 +386,16 @@ for (let r = startRow; r < targetRows.length; r++) {
 const csv = XLSX.utils.sheet_to_csv(newWs);
 
 // 👉 关键3：下载（UTF-8，无 BOM，适合你用 gpad）
-const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+// 👉 UTF-8 → SJIS 转换（关键）
+const sjisArray = Encoding.convert(csv, {
+  to: "SJIS",
+  from: "UNICODE",
+  type: "array"
+});
+
+const blob = new Blob([new Uint8Array(sjisArray)], {
+  type: "text/csv"
+});
 
 const link = document.createElement("a");
 link.href = URL.createObjectURL(blob);
