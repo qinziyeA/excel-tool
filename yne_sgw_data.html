@@ -36,6 +36,7 @@ button { margin-top:15px; padding:10px; background:#1677ff; color:#fff; border:n
 
 const $ = id => document.getElementById(id);
 
+// 日期
 function todayFull(){
   const d = new Date();
   return d.getFullYear().toString() +
@@ -49,14 +50,20 @@ function todayShort(){
          String(d.getDate()).padStart(2,'0');
 }
 
+// 防科学计数法
 function toStr(v){
   if(v===undefined || v===null) return "";
-  return String(v).replace(/\.0$/, "");
+  return String(v);
 }
 
-function clean(v){
-  if(!v) return "";
-  return String(v).replace(/,/g, " "); // 防止触发引号
+// ⭐ 核心：防CSV引号
+function safe(v){
+  if(v === undefined || v === null) return "";
+
+  return String(v)
+    .replace(/,/g, " ")
+    .replace(/"/g, "")
+    .replace(/\r?\n/g, " ");
 }
 
 $("run").onclick = () => {
@@ -104,7 +111,7 @@ $("run").onclick = () => {
         toStr(r[32]),
         toStr(r[33]),
         toStr(map[key]),
-        clean(r[5]),
+        safe(r[5]),             // ⭐ 用safe
         toStr(r[34]),
         (parseFloat(r[6])||0).toFixed(1)
       ];
@@ -112,20 +119,14 @@ $("run").onclick = () => {
       result.push(newRow);
     }
 
-    // 👉 生成CSV
-    let csv = XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(result));
-
-    // 👉 强制去掉双引号
-    csv = csv.replace(/"/g, "");
+    const ws2 = XLSX.utils.aoa_to_sheet(result);
+    const csv = XLSX.utils.sheet_to_csv(ws2);
 
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const link = document.createElement("a");
 
     link.href = URL.createObjectURL(blob);
-
-    // 👉 文件名
     link.download = "YNE" + todayShort() + ".csv";
-
     link.click();
 
     $("log").textContent = "完成，共生成 " + result.length + " 条数据";
