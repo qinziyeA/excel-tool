@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head><title>免按键延迟截图工具</title></head>
+<body>
+    <button onclick="startCapture()" style="padding:15px; font-size:18px;">开启 5 秒后延迟截图</button>
+    <p id="status"></p><canvas id="canvas" style="border:1px solid #ccc; max-width:100%;"></canvas>
+    <script>
+        async function startCapture() {
+            try {
+                // 1. 先申请屏幕捕获权限（此时会弹窗让您选择截取哪一个窗口或全屏）
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                
+                let countdown = 5;
+                const timer = setInterval(() => {
+                    document.getElementById('status').innerText = `请迅速切换到 Whalek 界面！倒计时：${countdown}秒`;
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        // 2. 倒计时结束，静默抓取画面，完全不触发系统键盘事件
+                        const canvas = document.getElementById('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        document.getElementById('status').innerText = "截图完成！右键下方图片保存即可。";
+                        // 关闭流，防止持续录屏
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    countdown--;
+                }, 1000);
+            } catch (err) { alert("授权失败: " + err); }
+        }
+    </script>
+</body>
+</html>
