@@ -96,14 +96,15 @@
   <div class="container">
     <h1>东京菜鸟表处理工具</h1>
     <div class="note">
-      <b>用途：</b>上传需要处理的东京菜鸟表 + 黑猫参照表。工具会修剪地址、匹配/校正黑猫表邮编和分拣码，并处理手机号。所有处理都在浏览器本地完成，不会上传到服务器。
+      <b>用途：</b>上传需要处理的东京菜鸟表 + 黑猫参照表。工具会处理手机号，按地址/邮编参照黑猫表补充邮编和分拣码。所有处理都在浏览器本地完成，不会上传到服务器。<br>
+      <b>本版说明：</b>本版按 U列分拣码是否为空作为主要处理入口：U列已有值的行默认不检查、不覆盖；U列为空时才按完整地址/已有邮编/简化地址去补充或修正 E列邮编和 U列分拣码。
     </div>
 
     <div class="grid">
       <div class="card">
         <label>① 东京菜鸟表（需要修改的文件）</label>
         <input id="targetFile" type="file" accept=".xlsx,.xls,.csv" />
-        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；地址会用于匹配/校正邮编并补充分拣码；匹配结果写入E列和U列。</p>
+        <p class="small">默认读取第一个Sheet。C列手机号会原地修改；重点处理U列分拣码为空的行；匹配/修正结果写入E列和U列。</p>
       </div>
       <div class="card">
         <label>② 黑猫参照表</label>
@@ -173,9 +174,18 @@
       .trim();
   }
 
+  function toHalfWidthDigits(value) {
+    return String(value == null ? "" : value).replace(/[０-９]/g, (ch) => {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    });
+  }
+
   function normalizeZipKey(value) {
-    // 邮编用于比较时，只保留数字。例：123-4567 和 1234567 视为同一个邮编。
-    return cleanSpaces(value).replace(/[^0-9]/g, "");
+    return toHalfWidthDigits(value).replace(/[^0-9]/g, "");
+  }
+
+  function normalizeSortCodeKey(value) {
+    return cleanSpaces(value);
   }
 
   function findFromSecondCharAfterPrefecture(s, chars) {
@@ -186,7 +196,7 @@
       if (i >= 0 && (p < 0 || i < p)) p = i;
     }
 
-    // 关键规则：无视都道府県后面出现的第一个字。
+    // 无视都道府県后面出现的第一个字。
     // 例：千葉県市原市 -> 从「市原市」的第二个字符开始找，所以会命中后面的「市」。
     const start = p >= 0 ? p + 2 : 0;
 
@@ -202,7 +212,7 @@
     const s = cleanSpaces(value);
     if (!s) return "";
 
-    // 先找区/町；找不到再找市/郡
+    // 先找区/町；找不到再找市/郡。
     let pos = findFromSecondCharAfterPrefecture(s, ["区", "町"]);
     if (pos < 0) pos = findFromSecondCharAfterPrefecture(s, ["市", "郡"]);
 
@@ -272,24 +282,44 @@
       const sortCode = getCell(row, 1);
       const fullAddress = cleanSpaces(getCell(row, 4));
       const zipKey = normalizeZipKey(zip);
-      if (!fullAddress) continue;
+      if (!fullAddress && !zipKey) continue;
 
       const item = { fullAddress, zip, sortCode, zipKey, rowNumber: i + 1 };
-      byAddress.push(item);
 
-      // 同一个邮编如果重复，只保留参照表里第一次出现的记录。
+      if (fullAddress) {
+        byAddress.push(item);
+      }
+
+      // 同一个邮编如果重复，只保留参照表里第一次出现的记录，用于“已有邮编但分拣码为空”的补充。
       if (zipKey && !byZip.has(zipKey)) {
         byZip.set(zipKey, item);
       }
     }
 
+    // 长地址优先，避免先命中很粗的地址。
+    byAddress.sort((a, b) => b.fullAddress.length - a.fullAddress.length);
+
     return { byAddress, byZip };
   }
 
-  function lookupByPrefix(trimmedAddress, refIndex) {
+  function lookupByFullAddress(originalAddress, refIndex) {
+    const full = cleanSpaces(originalAddress);
+    if (!full) return null;
+
+    // 只有“菜鸟原始地址以黑猫完整地址开头”才算完整地址匹配。
+    // 不用 item.fullAddress.startsWith(full)，避免只有「東京都江東区」这种粗地址时误匹配到任意一条。
+    for (const item of refIndex.byAddress) {
+      if (item.fullAddress && full.startsWith(item.fullAddress)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  function lookupByTrimmedAddress(trimmedAddress, refIndex) {
     if (!trimmedAddress) return null;
     for (const item of refIndex.byAddress) {
-      if (item.fullAddress.startsWith(trimmedAddress)) {
+      if (item.fullAddress && item.fullAddress.startsWith(trimmedAddress)) {
         return item;
       }
     }
@@ -300,6 +330,12 @@
     const zipKey = normalizeZipKey(zip);
     if (!zipKey) return null;
     return refIndex.byZip.get(zipKey) || null;
+  }
+
+  function addDetail(detailLogs, message) {
+    if (detailLogs.length < 50) {
+      detailLogs.push(message);
+    }
   }
 
   $("runBtn").addEventListener("click", async () => {
@@ -335,18 +371,23 @@
       log("建立黑猫地址索引...");
       const refIndex = buildReferenceIndex(refRows);
       log("黑猫参照地址数量: " + refIndex.byAddress.length);
+      log("黑猫参照邮编数量: " + refIndex.byZip.size);
 
-      let matched = 0;
-      let unmatched = 0;
-      let skippedExistingZip = 0;
-      let fixedExistingZip = 0;
-      let filledMissingSortCode = 0;
       let processed = 0;
+      let changedRows = 0;
+      let skippedSortCodeExists = 0;
+      let filledByFullAddress = 0;
+      let correctedZipByFullAddress = 0;
+      let filledSortByExistingZip = 0;
+      let filledByTrimmedAddressNeedCheck = 0;
+      let unmatchedSortBlank = 0;
+      const detailLogs = [];
 
       for (let r = startRow; r < targetRows.length; r++) {
         const row = targetRows[r];
         if (!row || row.length === 0) continue;
 
+        const excelRowNumber = r + 1;
         const originalAddress = getCell(row, addressCol);
         const phone = getCell(row, phoneCol);
 
@@ -354,56 +395,85 @@
         row[phoneCol] = normalizePhone(phone);
 
         const existingZip = getCell(row, zipCol);
+        const existingZipKey = normalizeZipKey(existingZip);
         const existingSortCode = getCell(row, sortCodeCol);
-        const trimmed = trimJapaneseAddress(originalAddress);
+        const existingSortCodeKey = normalizeSortCodeKey(existingSortCode);
+        const trimmedAddress = trimJapaneseAddress(originalAddress);
 
-        // 优先按地址匹配。这样即使E列已有错误邮编，或者U列分拣码为空，也会按参照表修正/补充。
-        const hitByAddress = lookupByPrefix(trimmed, refIndex);
+        // 你的业务规则：真正需要检查的问题行，主要都是 U列分拣码为空的行。
+        // 所以 U列已有分拣码时，默认不检查、不覆盖 E/U，避免误改本来完整的数据。
+        if (existingSortCodeKey) {
+          skippedSortCodeExists++;
+          processed++;
+          continue;
+        }
+
+        const hitByFullAddress = lookupByFullAddress(originalAddress, refIndex);
         const hitByZip = existingZip ? lookupByZip(existingZip, refIndex) : null;
+        const hitByTrimmedAddress = !hitByFullAddress
+          ? lookupByTrimmedAddress(trimmedAddress, refIndex)
+          : null;
 
-        if (hitByAddress) {
-          const existingZipKey = normalizeZipKey(existingZip);
-          const hitZipKey = normalizeZipKey(hitByAddress.zip);
-          const zipSame = existingZipKey && hitZipKey && existingZipKey === hitZipKey;
+        if (hitByFullAddress) {
+          const hitZipKey = normalizeZipKey(hitByFullAddress.zip);
 
-          if (!existingZip || !existingSortCode || !zipSame) {
-            if (existingZip && !zipSame) fixedExistingZip++;
-            if (!existingSortCode) filledMissingSortCode++;
-
-            row[zipCol] = hitByAddress.zip;
-            row[sortCodeCol] = hitByAddress.sortCode;
-            matched++;
+          // U列为空时，完整地址匹配结果优先级最高。
+          // 这样可以同时处理：E列空白、E列邮编错误、E列有邮编但U列缺失。
+          if (!existingZipKey) {
+            row[zipCol] = hitByFullAddress.zip;
+            row[sortCodeCol] = hitByFullAddress.sortCode;
+            filledByFullAddress++;
+            changedRows++;
+            addDetail(detailLogs, `第${excelRowNumber}行：U列空白，按完整地址补充 E/U → ${hitByFullAddress.zip} / ${hitByFullAddress.sortCode}`);
+          } else if (hitZipKey && existingZipKey !== hitZipKey) {
+            row[zipCol] = hitByFullAddress.zip;
+            row[sortCodeCol] = hitByFullAddress.sortCode;
+            correctedZipByFullAddress++;
+            changedRows++;
+            addDetail(detailLogs, `第${excelRowNumber}行：U列空白，且E列邮编与完整地址不一致，已修正 E/U：${existingZip} → ${hitByFullAddress.zip}，分拣码 → ${hitByFullAddress.sortCode}`);
           } else {
-            // 邮编和分拣码都已有，而且地址匹配到的邮编也一致，才跳过。
-            skippedExistingZip++;
+            row[sortCodeCol] = hitByFullAddress.sortCode;
+            filledByFullAddress++;
+            changedRows++;
+            addDetail(detailLogs, `第${excelRowNumber}行：U列空白，E列邮编与完整地址一致，补充U列 → ${hitByFullAddress.sortCode}`);
           }
-        } else if (existingZip && !existingSortCode && hitByZip) {
-          // 地址没匹配上，但E列邮编在参照表里存在，则至少把U列分拣码补上。
-          row[zipCol] = hitByZip.zip;
+        } else if (hitByZip && hitByZip.sortCode) {
+          // 完整地址没有匹配到时，再用已有E列邮编补U列。
+          // 这里不修改E列，只补U列。
           row[sortCodeCol] = hitByZip.sortCode;
-          filledMissingSortCode++;
-          matched++;
-        } else if (existingZip && existingSortCode) {
-          // 地址没匹配上，但E/U都有值。无法判断是否错误，所以不强行覆盖。
-          skippedExistingZip++;
+          filledSortByExistingZip++;
+          changedRows++;
+          addDetail(detailLogs, `第${excelRowNumber}行：U列空白，完整地址未命中，按已有E列邮编补U列 → ${hitByZip.sortCode}`);
+        } else if (!existingZipKey && hitByTrimmedAddress) {
+          // 最后才使用简化地址，且只在E列也为空时使用，避免粗地址误改已有邮编。
+          row[zipCol] = hitByTrimmedAddress.zip;
+          row[sortCodeCol] = hitByTrimmedAddress.sortCode;
+          filledByTrimmedAddressNeedCheck++;
+          changedRows++;
+          addDetail(detailLogs, `第${excelRowNumber}行：U列和E列都空，按简化地址补充 E/U（需人工确认） → ${hitByTrimmedAddress.zip} / ${hitByTrimmedAddress.sortCode}`);
         } else {
-          // 没有匹配结果。为了避免把原本已有的邮编误删，只在E列原本为空时清空E/U。
-          if (!existingZip) {
-            row[zipCol] = "";
-            row[sortCodeCol] = "";
-          }
-          unmatched++;
+          unmatchedSortBlank++;
+          addDetail(detailLogs, `第${excelRowNumber}行：U列空白，但完整地址/已有邮编/简化地址均未匹配，未修改`);
         }
 
         processed++;
       }
 
       log("处理完成。总行数: " + processed);
-      log("匹配/修正成功: " + matched);
-      log("已有完整邮编和分拣码，未覆盖: " + skippedExistingZip);
-      log("疑似邮编不匹配: " + fixedExistingZip);
-      log("补充分拣码: " + filledMissingSortCode);
-      log("未匹配: " + unmatched);
+      log("实际修改行数: " + changedRows);
+      log("U列已有分拣码，未检查/未修改: " + skippedSortCodeExists);
+      log("U列空白，按完整地址补充/填写: " + filledByFullAddress);
+      log("U列空白，按完整地址修正E列邮编并填写U列: " + correctedZipByFullAddress);
+      log("U列空白，按已有E列邮编补U列: " + filledSortByExistingZip);
+      log("U列和E列都空，按简化地址补充（建议人工确认）: " + filledByTrimmedAddressNeedCheck);
+      log("U列空白但未匹配，未修改: " + unmatchedSortBlank);
+
+      if (detailLogs.length > 0) {
+        log("\n变更/未匹配明细（最多显示50条）:");
+        for (const line of detailLogs) {
+          log(line);
+        }
+      }
 
       const newWs = XLSX.utils.aoa_to_sheet(targetRows);
 
@@ -420,37 +490,36 @@
       targetWb.Sheets[targetSheetName] = newWs;
 
       const baseName = targetFile.name.replace(/\.(csv|xlsx|xls)$/i, "");
-const outputName = baseName + "_processed.csv";
+      const outputName = baseName + "_processed.csv";
 
-// 确保手机号是字符串（防止丢0）
-for (let r = startRow; r < targetRows.length; r++) {
-  const row = targetRows[r];
-  if (!row) continue;
+      // 确保手机号是字符串（防止丢0）。
+      for (let r = startRow; r < targetRows.length; r++) {
+        const row = targetRows[r];
+        if (!row) continue;
 
-  if (row[phoneCol]) {
-    row[phoneCol] = String(row[phoneCol]);
-  }
-}
+        if (row[phoneCol]) {
+          row[phoneCol] = String(row[phoneCol]);
+        }
+      }
 
-// 生成 CSV
-const csv = XLSX.utils.sheet_to_csv(newWs);
+      // 生成 CSV。
+      const csv = XLSX.utils.sheet_to_csv(newWs);
 
-// 下载（UTF-8，无 BOM，适合gpad）
-// UTF-8 → SJIS 转换（关键）
-const sjisArray = Encoding.convert(csv, {
-  to: "SJIS",
-  from: "UNICODE",
-  type: "array"
-});
+      // UTF-8 → SJIS 转换，适合日文CSV在部分日本业务软件/GPad里打开。
+      const sjisArray = Encoding.convert(csv, {
+        to: "SJIS",
+        from: "UNICODE",
+        type: "array"
+      });
 
-const blob = new Blob([new Uint8Array(sjisArray)], {
-  type: "text/csv"
-});
+      const blob = new Blob([new Uint8Array(sjisArray)], {
+        type: "text/csv"
+      });
 
-const link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.download = outputName;
-link.click();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = outputName;
+      link.click();
       log("已生成下载文件: " + outputName);
     } catch (err) {
       console.error(err);
