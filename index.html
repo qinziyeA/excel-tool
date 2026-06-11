@@ -270,6 +270,7 @@
 <body>
   <div class="container">
     <h1>ISLS数据处理</h1>
+    <div class="version">日志优化版：单纯删除null不显示明细和数量</div>
 
     <div class="grid">
       <div class="card">
@@ -445,6 +446,39 @@
     return chars.slice(0, maxChars).join("");
   }
 
+  function fixPhone(value) {
+    const original = toText(value);
+    let v = original.replace(/[\t\r\n ]+/g, "").trim();
+    let removedPrefix = false;
+    let filledEmpty = false;
+    let cut = false;
+
+    // 只删除开头的 +81 / ＋81。不是开头的不动。
+    if (/^[+＋]81/.test(v)) {
+      v = v.replace(/^[+＋]81/, "");
+      removedPrefix = true;
+    }
+
+    // 原本为空，或者删除+81后为空，都补8位0。
+    if (!v) {
+      v = "00000000";
+      filledEmpty = true;
+    }
+
+    if (Array.from(v).length > 12) {
+      v = truncateByChars(v, 12);
+      cut = true;
+    }
+
+    return {
+      value: v,
+      changed: v !== original,
+      removedPrefix,
+      filledEmpty,
+      cut
+    };
+  }
+
   function normalizeSpaces(value) {
     return toText(value)
       .replace(/\u3000/g, " ")
@@ -604,7 +638,7 @@
     if (cleaned !== original) {
       row[colIndex] = cleaned;
       stats[statsKey]++;
-      addDetail(`第${rowNo}行 ${colLabel}特殊处理：删除null（${sjisByteLength(original)}byte → ${sjisByteLength(cleaned)}byte）`);
+      // 单纯删除null只做数量统计，不在底部特殊处理明细里逐行显示。
       return true;
     }
     return false;
@@ -1032,6 +1066,8 @@
 
       const stats = {
         processed: 0,
+        phonePrefixRemoved: 0,
+        phoneEmptyFilled: 0,
         phoneCut: 0,
         dNameCut: 0,
         mNameCut: 0,
@@ -1075,12 +1111,13 @@
         let rowChanged = false;
         const rowNo = r + 1;
 
-        // C列：手机号最多12个字符，超过直接切
-        const phoneOriginal = toText(row[COL_C_PHONE]);
-        const phoneChars = Array.from(phoneOriginal).length;
-        if (phoneChars > 12) {
-          row[COL_C_PHONE] = truncateByChars(phoneOriginal, 12);
-          stats.phoneCut++;
+        // C列：手机号处理。开头+81删除；空白或删除后为空则补00000000；最终最多12字符。
+        const phoneFix = fixPhone(row[COL_C_PHONE]);
+        if (phoneFix.changed) {
+          row[COL_C_PHONE] = phoneFix.value;
+          if (phoneFix.removedPrefix) stats.phonePrefixRemoved++;
+          if (phoneFix.filledEmpty) stats.phoneEmptyFilled++;
+          if (phoneFix.cut) stats.phoneCut++;
           rowChanged = true;
         }
 
@@ -1169,12 +1206,11 @@
       log("处理数据行数: " + stats.processed);
       log("未修改行数: " + stats.unchangedRows);
       log("R/S列写入或修正: " + stats.rsUpdated);
+      log("C列手机号删除开头+81: " + stats.phonePrefixRemoved);
+      log("C列手机号空白/删除+81后为空补00000000: " + stats.phoneEmptyFilled);
       log("C列手机号超12字符截断: " + stats.phoneCut);
       log("D列人名超15byte截断: " + stats.dNameCut);
       log("M列人名超15byte截断: " + stats.mNameCut);
-      log("F列删除null行数: " + stats.fNullRemoved);
-      log("H列删除null行数: " + stats.hNullRemoved);
-      log("N列删除null行数: " + stats.nNullRemoved);
       log("F列住所超95byte检测到: " + stats.fOverLimit);
       log("F列住所删除邮编/JAPAN/重复内容: " + stats.fCleaned);
       log("F列住所最终仍超长并截断: " + stats.fCut);
@@ -1198,7 +1234,7 @@
         for (const d of details) log(d);
         if (details.length >= detailLimit) log("特殊处理明细过多，后续省略。");
       } else {
-        log("\n没有F列特殊清理行。单纯截断只统计数量，不逐行显示。");
+        log("\n没有需要逐行显示的特殊清理行。单纯截断只统计数量，不逐行显示。");
       }
 
       if (zipMatchEnabled) {
