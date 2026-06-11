@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISLS数据处理</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 24px;
+      color: #222;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    h1 { margin: 0 0 20px; font-size: 24px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    label.title {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="file"], input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      background: #fff;
+    }
+    .small { color: #666; font-size: 13px; line-height: 1.5; margin-top: 8px; }
+    .advanced-settings {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 0;
+      background: #fafafa;
+      overflow: hidden;
+    }
+    .advanced-settings summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 16px;
+      font-weight: 700;
+      user-select: none;
+    }
+    .advanced-settings summary::-webkit-details-marker { display: none; }
+    .advanced-settings summary::after {
+      content: "默认第2行开始，点击调整";
+      display: block;
+      color: #666;
+      font-size: 12px;
+      font-weight: 400;
+      margin-top: 4px;
+    }
+    .advanced-settings[open] summary { border-bottom: 1px solid #e5e7eb; }
+    .advanced-body { padding: 16px; }
+
+    .section-title {
+      font-weight: bold;
+      margin: 18px 0 10px;
+    }
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .radio-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #d7dce8;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all .18s ease;
+      user-select: none;
+      min-height: 44px;
+    }
+    .radio-card input { display: none; }
+    .dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #aab3c5;
+      background: #fff;
+      box-sizing: border-box;
+      transition: all .18s ease;
+      flex: 0 0 auto;
+    }
+    .radio-card .text {
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .radio-card .sub {
+      color: #666;
+      font-size: 12px;
+      margin-top: 3px;
+      word-break: break-all;
+    }
+    .radio-card.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+      transform: translateY(-1px);
+    }
+    .radio-card.selected .dot {
+      border-color: #2563eb;
+      background: radial-gradient(circle at center, #2563eb 0 45%, transparent 48% 100%);
+    }
+    .agent-wrap {
+      margin-top: 14px;
+      display: none;
+      border: 1px solid #d7dce8;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+    .agent-wrap.show { display: block; }
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #d7dce8;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all .18s ease;
+      user-select: none;
+    }
+    .agent-card input { display: none; }
+    .agent-card .dot { width: 16px; height: 16px; }
+    .agent-card .text { font-weight: 700; font-size: 13px; }
+    .agent-card .sub { color: #666; font-size: 11px; margin-top: 2px; word-break: break-all; }
+    .agent-card.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.10);
+    }
+    .agent-card.selected .dot {
+      border-color: #2563eb;
+      background: radial-gradient(circle at center, #2563eb 0 45%, transparent 48% 100%);
+    }
+
+    .zip-option-wrap {
+      margin-top: 14px;
+      display: none;
+      border: 1px solid #d7dce8;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+    .zip-option-wrap.show { display: block; }
+    .check-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #d7dce8;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all .18s ease;
+      user-select: none;
+    }
+    .check-card input { display: none; }
+    .check-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #aab3c5;
+      background: #fff;
+      box-sizing: border-box;
+      transition: all .18s ease;
+      flex: 0 0 auto;
+    }
+    .check-card .text { font-weight: 700; font-size: 14px; }
+    .check-card .sub { color: #666; font-size: 12px; margin-top: 3px; }
+    .check-card.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .check-card.selected .check-dot {
+      border-color: #2563eb;
+      background: radial-gradient(circle at center, #2563eb 0 45%, transparent 48% 100%);
+    }
+    .ref-upload-wrap { display: none; margin-top: 12px; }
+    .ref-upload-wrap.show { display: block; }
+    .drop-zone {
+      border: 2px dashed #b8c2d6;
+      border-radius: 12px;
+      background: #fff;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .18s ease;
+    }
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .drop-zone.has-file {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .drop-main { font-weight: 700; font-size: 15px; }
+    .drop-sub { color: #666; font-size: 12px; margin-top: 6px; word-break: break-all; }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .log {
+      margin-top: 18px;
+      padding: 14px;
+      background: #111827;
+      color: #d1fae5;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      min-height: 150px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    @media (max-width: 900px) {
+      .grid, .type-grid { grid-template-columns: 1fr; }
+      .agent-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ISLS数据处理</h1>
+
+    <div class="grid">
+      <div class="card">
+        <label class="title">① 上传CSV文件</label>
+        <input id="csvFile" type="file" accept=".csv" />
+      </div>
+      <details class="advanced-settings">
+        <summary>高级设置</summary>
+        <div class="advanced-body">
+          <label class="title">开始行</label>
+          <input id="startRow" type="text" value="2" />
+          <div class="small">默认从第2行开始处理；只有格式不是标题行时才需要改。</div>
+        </div>
+      </details>
+    </div>
+
+    <div class="section-title">② 选择类型</div>
+    <div class="type-grid" id="typeGroup">
+      <label class="radio-card selected">
+        <input type="radio" name="shipType" value="cainiao_osaka" checked />
+        <span class="dot"></span>
+        <span>
+          <div class="text">菜鸟大阪</div>
+          <div class="sub">R=036429996021 / S空</div>
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="shipType" value="normal_osaka" />
+        <span class="dot"></span>
+        <span>
+          <div class="text">普通大阪</div>
+          <div class="sub">需要选择代理店</div>
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="shipType" value="normal_tokyo" />
+        <span class="dot"></span>
+        <span>
+          <div class="text">普通东京</div>
+          <div class="sub">R=072463680199 / S空</div>
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="shipType" value="cainiao_tokyo" />
+        <span class="dot"></span>
+        <span>
+          <div class="text">菜鸟东京</div>
+          <div class="sub">R=036429996010 / S空</div>
+        </span>
+      </label>
+    </div>
+
+    <div class="agent-wrap" id="agentWrap">
+      <label class="title">普通大阪代理店</label>
+      <div class="agent-grid" id="agentGroup">
+        <label class="agent-card selected">
+          <input type="radio" name="agent" value="YNE" checked />
+          <span class="dot"></span><span><div class="text">YNE</div><div class="sub">0724636801 / 019</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="MMA" />
+          <span class="dot"></span><span><div class="text">MMA</div><div class="sub">0724636801 / S空</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="NY" />
+          <span class="dot"></span><span><div class="text">NY</div><div class="sub">0724636801 / 045</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="LDX" />
+          <span class="dot"></span><span><div class="text">LDX</div><div class="sub">0724636801 / 02</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="RG" />
+          <span class="dot"></span><span><div class="text">RG</div><div class="sub">0724636801 / 006</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="CJ" />
+          <span class="dot"></span><span><div class="text">CJ</div><div class="sub">0724636801 / 015</div></span>
+        </label>
+        <label class="agent-card">
+          <input type="radio" name="agent" value="CNE" />
+          <span class="dot"></span><span><div class="text">CNE</div><div class="sub">0724636801 / 044</div></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="zip-option-wrap" id="zipOptionWrap">
+      <label class="check-card" id="zipCheckCard">
+        <input id="zipMatchCheckbox" type="checkbox" />
+        <span class="check-dot"></span>
+        <span>
+          <div class="text">进行邮编匹配</div>
+          <div class="sub">仅选择菜鸟东京时可用。勾选后会在修正长度、手机号、R/S列之后，再按参照表匹配E列邮编和U列分拣码。</div>
+        </span>
+      </label>
+      <div class="ref-upload-wrap" id="refUploadWrap">
+        <label class="title">请拖入参照表</label>
+        <div class="drop-zone" id="refDropZone">
+          <div class="drop-main">请拖入参照表</div>
+          <div class="drop-sub" id="refFileName">支持 .xlsx / .xls / .csv，参照表默认 A列邮编、B列分拣码、E列完整地址</div>
+        </div>
+        <input id="refFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" />
+      </div>
+    </div>
+
+    <button id="runBtn">开始修正并下载结果</button>
+    <div id="log" class="log">等待上传CSV...</div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const SHIP_SETTINGS = {
+    cainiao_osaka: { label: "菜鸟大阪", r: "036429996021", s: "" },
+    normal_tokyo: { label: "普通东京", r: "072463680199", s: "" },
+    cainiao_tokyo: { label: "菜鸟东京", r: "036429996010", s: "" }
+  };
+
+  const AGENT_SETTINGS = {
+    YNE: { label: "YNE", r: "0724636801", s: "019" },
+    MMA: { label: "MMA", r: "0724636801", s: "" },
+    NY:  { label: "NY",  r: "0724636801", s: "045" },
+    LDX: { label: "LDX", r: "0724636801", s: "02" },
+    RG:  { label: "RG",  r: "0724636801", s: "006" },
+    CJ:  { label: "CJ",  r: "0724636801", s: "015" },
+    CNE: { label: "CNE", r: "0724636801", s: "044" }
+  };
+
+  function log(message) {
+    $("log").textContent += "\n" + message;
+  }
+
+  function resetLog(message) {
+    $("log").textContent = message;
+  }
+
+  function toText(value) {
+    return value == null ? "" : String(value);
+  }
+
+  function isEmptyRow(row) {
+    if (!row || row.length === 0) return true;
+    return row.every(v => toText(v).trim() === "");
+  }
+
+  function sjisByteLength(value) {
+    const s = toText(value);
+    const arr = Encoding.convert(s, {
+      to: "SJIS",
+      from: "UNICODE",
+      type: "array"
+    });
+    return arr.length;
+  }
+
+  function truncateBySjisByte(value, maxBytes) {
+    const chars = Array.from(toText(value));
+    let out = "";
+    let used = 0;
+
+    for (const ch of chars) {
+      const b = sjisByteLength(ch);
+      if (used + b > maxBytes) break;
+      out += ch;
+      used += b;
+    }
+    return out;
+  }
+
+  function truncateByChars(value, maxChars) {
+    const chars = Array.from(toText(value));
+    if (chars.length <= maxChars) return toText(value);
+    return chars.slice(0, maxChars).join("");
+  }
+
+  function normalizeSpaces(value) {
+    return toText(value)
+      .replace(/\u3000/g, " ")
+      .replace(/[\t\r\n]+/g, " ")
+      .replace(/ {2,}/g, " ")
+      .trim();
+  }
+
+  function removeNullText(value) {
+    // 删除真正的 NUL 控制字符，以及文字形式的 null / NULL / ＮＵＬＬ。
+    // 也兼容 n u l l 这种中间混入空格的情况。
+    return toText(value)
+      .replace(/[\u0000\x00]/g, "")
+      .replace(/[NnＮｎ][\s\u3000]*[UuＵｕ][\s\u3000]*[LlＬｌ][\s\u3000]*[LlＬｌ]/g, "")
+      .replace(/ヌル/g, "");
+  }
+
+  function cleanAddressForMatch(value) {
+    return cleanSpaces(removeNullText(value));
+  }
+
+  function removeZipAndJapan(value) {
+    let s = toText(value);
+
+    // 删除 3位-4位 邮编：123-4567 / １２３－４５６７ / 123－4567 等
+    s = s.replace(/[0-9０-９]{3}\s*[-－ー―]\s*[0-9０-９]{4}/g, " ");
+
+    // 删除 JAPAN，不区分大小写，也兼容全角ＪＡＰＡＮ
+    s = s.replace(/\bJAPAN\b/gi, " ");
+    s = s.replace(/[JjＪｊ][AaＡａ][PpＰｐ][AaＡａ][NnＮｎ]/g, " ");
+
+    return normalizeSpaces(s);
+  }
+
+  function reduceWholeStringRepetition(value) {
+    const s = normalizeSpaces(value);
+    const chars = Array.from(s);
+    const n = chars.length;
+    if (n < 2) return s;
+
+    // 处理 abcabc / abcabcabc 这种完整重复，只保留一次 abc
+    for (let len = 1; len <= Math.floor(n / 2); len++) {
+      if (n % len !== 0) continue;
+      const unit = chars.slice(0, len).join("");
+      if (!unit) continue;
+      if (unit.repeat(n / len) === s) return unit;
+    }
+    return s;
+  }
+
+  function dedupeSeparatedParts(value) {
+    const original = normalizeSpaces(value);
+    if (!original) return "";
+
+    // 只在有明显分隔符时处理，避免误删普通地址文字
+    if (!/[\s,，、;；\/／|｜]/.test(original)) return original;
+
+    const parts = original
+      .replace(/[,，、;；\/／|｜]+/g, " ")
+      .split(/\s+/)
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    const seen = new Set();
+    const out = [];
+    for (const p of parts) {
+      if (seen.has(p)) continue;
+      seen.add(p);
+      out.push(p);
+    }
+    return out.join(" ");
+  }
+
+  function fixFAddress(value, maxBytes) {
+    const original = toText(value);
+    const beforeBytes = sjisByteLength(original);
+
+    // 重要：F列优先判定长度。没超95byte就完全不动。
+    if (beforeBytes <= maxBytes) {
+      return {
+        value: original,
+        changed: false,
+        overLimit: false,
+        truncated: false,
+        cleaned: false,
+        beforeBytes,
+        afterBytes: beforeBytes,
+        steps: []
+      };
+    }
+
+    let v = original;
+    const steps = [];
+
+    const removed = removeZipAndJapan(v);
+    if (removed !== v) {
+      v = removed;
+      steps.push("删除邮编/JAPAN");
+    }
+
+    const reducedWhole = reduceWholeStringRepetition(v);
+    if (reducedWhole !== v) {
+      v = reducedWhole;
+      steps.push("删除整段重复内容");
+    }
+
+    const deduped = dedupeSeparatedParts(v);
+    if (deduped !== v) {
+      v = deduped;
+      steps.push("删除分隔重复内容");
+    }
+
+    let truncated = false;
+    if (sjisByteLength(v) > maxBytes) {
+      v = truncateBySjisByte(v, maxBytes);
+      truncated = true;
+      steps.push("按95byte截断");
+    }
+
+    return {
+      value: v,
+      changed: v !== original,
+      overLimit: true,
+      truncated,
+      cleaned: steps.some(s => s.includes("删除")),
+      beforeBytes,
+      afterBytes: sjisByteLength(v),
+      steps
+    };
+  }
+
+  function fixSjisLength(value, maxBytes) {
+    const original = toText(value);
+    const beforeBytes = sjisByteLength(original);
+    if (beforeBytes <= maxBytes) {
+      return {
+        value: original,
+        changed: false,
+        beforeBytes,
+        afterBytes: beforeBytes,
+        truncated: false
+      };
+    }
+    const v = truncateBySjisByte(original, maxBytes);
+    return {
+      value: v,
+      changed: v !== original,
+      beforeBytes,
+      afterBytes: sjisByteLength(v),
+      truncated: true
+    };
+  }
+
+  function removeNullInAddressColumn(row, colIndex, colLabel, rowNo, statsKey, stats, addDetail) {
+    const original = toText(row[colIndex]);
+    const cleaned = normalizeSpaces(removeNullText(original));
+    if (cleaned !== original) {
+      row[colIndex] = cleaned;
+      stats[statsKey]++;
+      addDetail(`第${rowNo}行 ${colLabel}特殊处理：删除null（${sjisByteLength(original)}byte → ${sjisByteLength(cleaned)}byte）`);
+      return true;
+    }
+    return false;
+  }
+
+  function readCsvFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const bytes = new Uint8Array(e.target.result);
+          let detected = Encoding.detect(bytes);
+          if (!detected) detected = "SJIS";
+
+          const unicodeArray = Encoding.convert(bytes, {
+            to: "UNICODE",
+            from: detected,
+            type: "array"
+          });
+          const text = Encoding.codeToString(unicodeArray);
+
+          const wb = XLSX.read(text, { type: "string", raw: true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+          resolve({ rows, detected });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+
+  function getCell(row, colIndex) {
+    const v = row && row[colIndex];
+    return v == null ? "" : String(v).trim();
+  }
+
+  function cleanSpaces(value) {
+    return String(value == null ? "" : value)
+      .replace(/\u3000/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+  }
+
+  function toHalfWidthDigits(value) {
+    return String(value == null ? "" : value).replace(/[０-９]/g, (ch) => {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    });
+  }
+
+  function normalizeZipKey(value) {
+    return toHalfWidthDigits(value).replace(/[^0-9]/g, "");
+  }
+
+  function normalizeSortCodeKey(value) {
+    return cleanSpaces(value);
+  }
+
+  function findFromSecondCharAfterPrefecture(s, chars) {
+    const prefectureMarks = ["県", "都", "府", "道"];
+    let p = -1;
+    for (const mark of prefectureMarks) {
+      const i = s.indexOf(mark);
+      if (i >= 0 && (p < 0 || i < p)) p = i;
+    }
+    const start = p >= 0 ? p + 2 : 0;
+    let best = -1;
+    for (const ch of chars) {
+      const idx = s.indexOf(ch, start);
+      if (idx >= 0 && (best < 0 || idx < best)) best = idx;
+    }
+    return best;
+  }
+
+  function getTrimmedAddressCandidates(value) {
+    const s = cleanAddressForMatch(value);
+    if (!s) return [];
+
+    let pos = findFromSecondCharAfterPrefecture(s, ["区", "町"]);
+    if (pos < 0) pos = findFromSecondCharAfterPrefecture(s, ["市", "郡"]);
+    if (pos < 0) return [{ value: s, label: "完整清理地址" }];
+
+    const base = s.slice(0, pos + 1);
+    const extended = s.slice(0, Math.min(s.length, pos + 3));
+    const candidates = [];
+
+    // null删除后，先在原来的简化地址基础上向后延展2个字符匹配。
+    // 如果匹配不到，再回退到原来的简化地址匹配。
+    if (extended && extended !== base) {
+      candidates.push({ value: extended, label: "简化地址+2字符" });
+    }
+    candidates.push({ value: base, label: "简化地址" });
+    return candidates;
+  }
+
+  function trimJapaneseAddress(value) {
+    const candidates = getTrimmedAddressCandidates(value);
+    return candidates.length ? candidates[candidates.length - 1].value : "";
+  }
+
+  function readReferenceWorkbook(file) {
+    const isCsv = /\.csv$/i.test(file.name);
+    if (isCsv) return readCsvFile(file).then(({ rows, detected }) => ({ rows, detected }));
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: "array", raw: true, cellText: false, cellDates: false });
+          const sheetName = wb.SheetNames.includes("Sheet1") ? "Sheet1" : wb.SheetNames[0];
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+          resolve({ rows, detected: "Excel" });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function buildReferenceIndex(refRows) {
+    // 参照表：A列=邮编, B列=分拣码, E列=完整地址
+    const byAddress = [];
+    const byZip = new Map();
+
+    for (let i = 0; i < refRows.length; i++) {
+      const row = refRows[i];
+      const zip = getCell(row, 0);
+      const sortCode = getCell(row, 1);
+      const fullAddress = cleanAddressForMatch(getCell(row, 4));
+      const zipKey = normalizeZipKey(zip);
+      if (!fullAddress && !zipKey) continue;
+
+      const item = { fullAddress, zip, sortCode, zipKey, rowNumber: i + 1 };
+      if (fullAddress) byAddress.push(item);
+      if (zipKey && !byZip.has(zipKey)) byZip.set(zipKey, item);
+    }
+
+    // 长地址优先，避免先命中粗地址。
+    byAddress.sort((a, b) => b.fullAddress.length - a.fullAddress.length);
+    return { byAddress, byZip };
+  }
+
+  function lookupByFullAddress(originalAddress, refIndex) {
+    const full = cleanAddressForMatch(originalAddress);
+    if (!full) return null;
+    for (const item of refIndex.byAddress) {
+      if (item.fullAddress && full.startsWith(item.fullAddress)) return item;
+    }
+    return null;
+  }
+
+  function lookupByTrimmedAddress(trimmedAddress, refIndex) {
+    if (!trimmedAddress) return null;
+    for (const item of refIndex.byAddress) {
+      if (item.fullAddress && item.fullAddress.startsWith(trimmedAddress)) return item;
+    }
+    return null;
+  }
+
+  function lookupByTrimmedCandidates(candidates, refIndex) {
+    for (const candidate of candidates) {
+      const item = lookupByTrimmedAddress(candidate.value, refIndex);
+      if (item) return { item, candidate };
+    }
+    return null;
+  }
+
+  function lookupByZip(zip, refIndex) {
+    const zipKey = normalizeZipKey(zip);
+    if (!zipKey) return null;
+    return refIndex.byZip.get(zipKey) || null;
+  }
+
+  function applyZipMatchToRow(row, rowNo, refIndex, zipStats, zipDetails) {
+    const COL_E_ZIP = 4;
+    const COL_F_ADDR = 5;
+    const COL_U_SORT = 20;
+
+    const originalAddress = getCell(row, COL_F_ADDR);
+    const existingZip = getCell(row, COL_E_ZIP);
+    const existingZipKey = normalizeZipKey(existingZip);
+    const existingSortCode = getCell(row, COL_U_SORT);
+    const existingSortCodeKey = normalizeSortCodeKey(existingSortCode);
+    const trimmedCandidates = getTrimmedAddressCandidates(originalAddress);
+
+    zipStats.checked++;
+
+    // 仍然沿用之前的安全规则：U列已有分拣码时不检查、不覆盖E/U。
+    if (existingSortCodeKey) {
+      zipStats.skippedSortCodeExists++;
+      return false;
+    }
+
+    // 先按「简化地址+后面2个字符」匹配。
+    // 例：東京都渋谷区千駄?谷 → 先用 東京都渋谷区千駄 匹配，避免直接落到 東京都渋谷区。
+    // 如果 +2 字符匹配不到，再回退到原来的简化地址。最后才使用完整地址/已有邮编兜底。
+    const hitByTrimmedResult = lookupByTrimmedCandidates(trimmedCandidates, refIndex);
+    const hitByTrimmedAddress = hitByTrimmedResult ? hitByTrimmedResult.item : null;
+    const hitByFullAddress = hitByTrimmedAddress ? null : lookupByFullAddress(originalAddress, refIndex);
+    const hitByZip = existingZip ? lookupByZip(existingZip, refIndex) : null;
+    const addressHit = hitByTrimmedAddress || hitByFullAddress;
+    const addressHitLabel = hitByTrimmedResult && hitByTrimmedResult.candidate
+      ? hitByTrimmedResult.candidate.label
+      : "完整地址";
+
+    function addZipDetail(message) {
+      if (zipDetails.length < 80) zipDetails.push(message);
+    }
+
+    if (addressHit) {
+      const hitZipKey = normalizeZipKey(addressHit.zip);
+      if (!existingZipKey) {
+        row[COL_E_ZIP] = addressHit.zip;
+        row[COL_U_SORT] = addressHit.sortCode;
+        if (hitByTrimmedAddress) zipStats.filledByTrimmedAddressNeedCheck++;
+        else zipStats.filledByFullAddress++;
+        zipStats.changed++;
+        const needCheckText = hitByTrimmedAddress ? "（需人工确认）" : "";
+        addZipDetail(`第${rowNo}行：U列空白，按${addressHitLabel}补充 E/U${needCheckText} → ${addressHit.zip} / ${addressHit.sortCode}`);
+        return true;
+      }
+      if (hitZipKey && existingZipKey !== hitZipKey) {
+        row[COL_E_ZIP] = addressHit.zip;
+        row[COL_U_SORT] = addressHit.sortCode;
+        zipStats.correctedZipByFullAddress++;
+        zipStats.changed++;
+        addZipDetail(`第${rowNo}行：U列空白，且E列邮编与${addressHitLabel}匹配结果不一致，已修正 E/U：${existingZip} → ${addressHit.zip}，分拣码 → ${addressHit.sortCode}`);
+        return true;
+      }
+      row[COL_U_SORT] = addressHit.sortCode;
+      if (hitByTrimmedAddress) zipStats.filledByTrimmedAddressNeedCheck++;
+      else zipStats.filledByFullAddress++;
+      zipStats.changed++;
+      addZipDetail(`第${rowNo}行：U列空白，E列邮编与${addressHitLabel}匹配结果一致，补充U列 → ${addressHit.sortCode}`);
+      return true;
+    }
+
+    if (hitByZip && hitByZip.sortCode) {
+      row[COL_U_SORT] = hitByZip.sortCode;
+      zipStats.filledSortByExistingZip++;
+      zipStats.changed++;
+      addZipDetail(`第${rowNo}行：U列空白，地址匹配未命中，按已有E列邮编补U列 → ${hitByZip.sortCode}`);
+      return true;
+    }
+
+    zipStats.unmatchedSortBlank++;
+    addZipDetail(`第${rowNo}行：U列空白，但完整地址/已有邮编/简化地址均未匹配，未修改`);
+    return false;
+  }
+
+  function csvEscape(value) {
+    const s = toText(value);
+    if (/[",\r\n]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function rowsToCsv(rows) {
+    const maxCols = Math.max(21, rows.reduce((m, row) => Math.max(m, row ? row.length : 0), 0));
+    return rows.map(row => {
+      const cells = [];
+      for (let i = 0; i < maxCols; i++) {
+        cells.push(csvEscape(row && row[i] != null ? row[i] : ""));
+      }
+      return cells.join(",");
+    }).join("\r\n");
+  }
+
+  function downloadSjisCsv(csvText, outputName) {
+    const sjisArray = Encoding.convert(csvText, {
+      to: "SJIS",
+      from: "UNICODE",
+      type: "array"
+    });
+    const blob = new Blob([new Uint8Array(sjisArray)], { type: "text/csv;charset=Shift_JIS" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = outputName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function getSelectedValue(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : "";
+  }
+
+  function getShippingSetting() {
+    const shipType = getSelectedValue("shipType");
+    if (shipType === "normal_osaka") {
+      const agent = getSelectedValue("agent") || "YNE";
+      const setting = AGENT_SETTINGS[agent];
+      return {
+        type: "普通大阪",
+        label: `普通大阪 - ${setting.label}`,
+        r: setting.r,
+        s: setting.s
+      };
+    }
+    const setting = SHIP_SETTINGS[shipType] || SHIP_SETTINGS.cainiao_osaka;
+    return {
+      type: setting.label,
+      label: setting.label,
+      r: setting.r,
+      s: setting.s
+    };
+  }
+
+  function refreshSelectionUI() {
+    document.querySelectorAll(".radio-card").forEach(card => {
+      const input = card.querySelector("input[type='radio']");
+      card.classList.toggle("selected", input && input.checked);
+    });
+    document.querySelectorAll(".agent-card").forEach(card => {
+      const input = card.querySelector("input[type='radio']");
+      card.classList.toggle("selected", input && input.checked);
+    });
+    const isNormalOsaka = getSelectedValue("shipType") === "normal_osaka";
+    $("agentWrap").classList.toggle("show", isNormalOsaka);
+
+    const isCainiaoTokyo = getSelectedValue("shipType") === "cainiao_tokyo";
+    $("zipOptionWrap").classList.toggle("show", isCainiaoTokyo);
+    if (!isCainiaoTokyo) $("zipMatchCheckbox").checked = false;
+
+    const zipEnabled = isCainiaoTokyo && $("zipMatchCheckbox").checked;
+    $("zipCheckCard").classList.toggle("selected", zipEnabled);
+    $("refUploadWrap").classList.toggle("show", zipEnabled);
+  }
+
+  function updateRefFileName() {
+    const file = $("refFile").files[0];
+    const zone = $("refDropZone");
+    if (file) {
+      $("refFileName").textContent = file.name;
+      zone.classList.add("has-file");
+    } else {
+      $("refFileName").textContent = "支持 .xlsx / .xls / .csv，参照表默认 A列邮编、B列分拣码、E列完整地址";
+      zone.classList.remove("has-file");
+    }
+  }
+
+  document.querySelectorAll("input[name='shipType'], input[name='agent']").forEach(input => {
+    input.addEventListener("change", refreshSelectionUI);
+  });
+  $("zipMatchCheckbox").addEventListener("change", refreshSelectionUI);
+  $("refDropZone").addEventListener("click", () => $("refFile").click());
+  $("refFile").addEventListener("change", updateRefFileName);
+  ["dragenter", "dragover"].forEach(name => {
+    $("refDropZone").addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      $("refDropZone").classList.add("dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach(name => {
+    $("refDropZone").addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      $("refDropZone").classList.remove("dragover");
+    });
+  });
+  $("refDropZone").addEventListener("drop", (e) => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    $("refFile").files = dt.files;
+    updateRefFileName();
+  });
+  refreshSelectionUI();
+
+  $("runBtn").addEventListener("click", async () => {
+    try {
+      resetLog("处理中...");
+
+      const file = $("csvFile").files[0];
+      if (!file) {
+        alert("请先上传CSV文件。");
+        resetLog("等待上传CSV...");
+        return;
+      }
+
+      const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
+      const shipping = getShippingSetting();
+      const zipMatchEnabled = getSelectedValue("shipType") === "cainiao_tokyo" && $("zipMatchCheckbox").checked;
+      const refFile = $("refFile").files[0];
+      if (zipMatchEnabled && !refFile) {
+        alert("请拖入参照表。\n参照表默认 A列=邮编、B列=分拣码、E列=完整地址。");
+        resetLog("等待上传CSV...");
+        return;
+      }
+
+      let refIndex = null;
+      if (zipMatchEnabled) {
+        log("读取参照表...");
+        const ref = await readReferenceWorkbook(refFile);
+        refIndex = buildReferenceIndex(ref.rows);
+        log("参照表读取编码/类型: " + ref.detected);
+        log("参照表地址数量: " + refIndex.byAddress.length + "，邮编数量: " + refIndex.byZip.size);
+      }
+
+      log("读取CSV...");
+      const { rows, detected } = await readCsvFile(file);
+      log("读取编码: " + detected);
+      log("总行数: " + rows.length);
+      log("选择类型: " + shipping.label + "，R列=" + shipping.r + "，S列=" + (shipping.s || "空"));
+      log("邮编匹配: " + (zipMatchEnabled ? "启用" : "未启用"));
+
+      const COL_C_PHONE = 2;
+      const COL_D_NAME = 3;
+      const COL_F_ADDR = 5;
+      const COL_H_ADDR = 7;
+      const COL_M_NAME = 12;
+      const COL_N_ADDR = 13;
+      const COL_R_CODE = 17;
+      const COL_S_CODE = 18;
+
+      const stats = {
+        processed: 0,
+        phoneCut: 0,
+        dNameCut: 0,
+        mNameCut: 0,
+        fOverLimit: 0,
+        fNullRemoved: 0,
+        hNullRemoved: 0,
+        nNullRemoved: 0,
+        fCleaned: 0,
+        fCut: 0,
+        hCut: 0,
+        nCut: 0,
+        rsUpdated: 0,
+        unchangedRows: 0,
+        zipChecked: 0,
+        zipChanged: 0
+      };
+
+      const details = [];
+      const zipDetails = [];
+      const detailLimit = 200;
+      const zipStats = {
+        checked: 0,
+        changed: 0,
+        skippedSortCodeExists: 0,
+        filledByFullAddress: 0,
+        correctedZipByFullAddress: 0,
+        filledSortByExistingZip: 0,
+        filledByTrimmedAddressNeedCheck: 0,
+        unmatchedSortBlank: 0
+      };
+
+      function addDetail(text) {
+        if (details.length < detailLimit) details.push(text);
+      }
+
+      for (let r = startRow; r < rows.length; r++) {
+        const row = rows[r] || [];
+        if (isEmptyRow(row)) continue;
+        stats.processed++;
+
+        let rowChanged = false;
+        const rowNo = r + 1;
+
+        // C列：手机号最多12个字符，超过直接切
+        const phoneOriginal = toText(row[COL_C_PHONE]);
+        const phoneChars = Array.from(phoneOriginal).length;
+        if (phoneChars > 12) {
+          row[COL_C_PHONE] = truncateByChars(phoneOriginal, 12);
+          stats.phoneCut++;
+          rowChanged = true;
+        }
+
+        // D列：人名15byte以内
+        const dFix = fixSjisLength(row[COL_D_NAME], 15);
+        if (dFix.changed) {
+          row[COL_D_NAME] = dFix.value;
+          stats.dNameCut++;
+          rowChanged = true;
+        }
+
+        // F列：先删除null字符/文字，再按95byte规则处理。
+        if (removeNullInAddressColumn(row, COL_F_ADDR, "F列", rowNo, "fNullRemoved", stats, addDetail)) {
+          rowChanged = true;
+        }
+
+        // F列：住所95byte以内，超长才删除邮编/JAPAN/重复内容或截断。
+        const fFix = fixFAddress(row[COL_F_ADDR], 95);
+        if (fFix.overLimit) stats.fOverLimit++;
+        if (fFix.changed) {
+          row[COL_F_ADDR] = fFix.value;
+          rowChanged = true;
+          if (fFix.cleaned) stats.fCleaned++;
+          if (fFix.truncated) stats.fCut++;
+          const specialSteps = fFix.steps.filter(s => s.includes("删除"));
+          if (specialSteps.length) {
+            addDetail(`第${rowNo}行 F列特殊处理：${specialSteps.join(" + ")}（${fFix.beforeBytes}byte → ${fFix.afterBytes}byte）`);
+          }
+        }
+
+        // H列：先删除null字符/文字，再按95byte以内处理。
+        if (removeNullInAddressColumn(row, COL_H_ADDR, "H列", rowNo, "hNullRemoved", stats, addDetail)) {
+          rowChanged = true;
+        }
+
+        // H列：住所95byte以内，超过直接切
+        const hFix = fixSjisLength(row[COL_H_ADDR], 95);
+        if (hFix.changed) {
+          row[COL_H_ADDR] = hFix.value;
+          stats.hCut++;
+          rowChanged = true;
+        }
+
+        // N列：先删除null字符/文字，再按95byte以内处理。
+        if (removeNullInAddressColumn(row, COL_N_ADDR, "N列", rowNo, "nNullRemoved", stats, addDetail)) {
+          rowChanged = true;
+        }
+
+        // N列：荷送人住所95byte以内，超过直接切
+        const nFix = fixSjisLength(row[COL_N_ADDR], 95);
+        if (nFix.changed) {
+          row[COL_N_ADDR] = nFix.value;
+          stats.nCut++;
+          rowChanged = true;
+        }
+
+        // M列：人名15byte以内
+        const mFix = fixSjisLength(row[COL_M_NAME], 15);
+        if (mFix.changed) {
+          row[COL_M_NAME] = mFix.value;
+          stats.mNameCut++;
+          rowChanged = true;
+        }
+
+        // R/S列：根据类型统一写入
+        const oldR = toText(row[COL_R_CODE]);
+        const oldS = toText(row[COL_S_CODE]);
+        if (oldR !== shipping.r || oldS !== shipping.s) {
+          row[COL_R_CODE] = shipping.r;
+          row[COL_S_CODE] = shipping.s;
+          stats.rsUpdated++;
+          rowChanged = true;
+        }
+
+        // 菜鸟东京专用：勾选后再做E列邮编、U列分拣码匹配。
+        if (zipMatchEnabled && refIndex) {
+          const zipChanged = applyZipMatchToRow(row, rowNo, refIndex, zipStats, zipDetails);
+          if (zipChanged) rowChanged = true;
+        }
+
+        if (!rowChanged) stats.unchangedRows++;
+        rows[r] = row;
+      }
+
+      log("修正完成。");
+      log("处理数据行数: " + stats.processed);
+      log("未修改行数: " + stats.unchangedRows);
+      log("R/S列写入或修正: " + stats.rsUpdated);
+      log("C列手机号超12字符截断: " + stats.phoneCut);
+      log("D列人名超15byte截断: " + stats.dNameCut);
+      log("M列人名超15byte截断: " + stats.mNameCut);
+      log("F列删除null行数: " + stats.fNullRemoved);
+      log("H列删除null行数: " + stats.hNullRemoved);
+      log("N列删除null行数: " + stats.nNullRemoved);
+      log("F列住所超95byte检测到: " + stats.fOverLimit);
+      log("F列住所删除邮编/JAPAN/重复内容: " + stats.fCleaned);
+      log("F列住所最终仍超长并截断: " + stats.fCut);
+      log("H列住所超95byte截断: " + stats.hCut);
+      log("N列荷送人住所超95byte截断: " + stats.nCut);
+
+      if (zipMatchEnabled) {
+        log("\n邮编匹配结果:");
+        log("检查行数: " + zipStats.checked);
+        log("E/U实际修改行数: " + zipStats.changed);
+        log("U列已有分拣码，未检查/未修改: " + zipStats.skippedSortCodeExists);
+        log("U列空白，按完整地址补充/填写: " + zipStats.filledByFullAddress);
+        log("U列空白，按完整地址修正E列邮编并填写U列: " + zipStats.correctedZipByFullAddress);
+        log("U列空白，按已有E列邮编补U列: " + zipStats.filledSortByExistingZip);
+        log("U列和E列都空，按简化地址补充（建议人工确认）: " + zipStats.filledByTrimmedAddressNeedCheck);
+        log("U列空白但未匹配，未修改: " + zipStats.unmatchedSortBlank);
+      }
+
+      if (details.length) {
+        log("\n特殊处理明细（只显示F列删除邮编/JAPAN/重复内容的行，最多" + detailLimit + "条）:");
+        for (const d of details) log(d);
+        if (details.length >= detailLimit) log("特殊处理明细过多，后续省略。");
+      } else {
+        log("\n没有F列特殊清理行。单纯截断只统计数量，不逐行显示。");
+      }
+
+      if (zipMatchEnabled) {
+        if (zipDetails.length) {
+          log("\n邮编匹配明细（最多显示80条）:");
+          for (const d of zipDetails) log(d);
+          if (zipDetails.length >= 80) log("邮编匹配明细过多，后续省略。");
+        } else {
+          log("\n邮编匹配没有需要显示的明细。");
+        }
+      }
+
+      const csv = rowsToCsv(rows);
+      const baseName = file.name.replace(/\.csv$/i, "");
+      const outputName = baseName + "_length_fixed_type.csv";
+      downloadSjisCsv(csv, outputName);
+      log("\n已生成下载文件: " + outputName);
+    } catch (err) {
+      console.error(err);
+      resetLog("出错了：\n" + err.message);
+    }
+  });
+</script>
+</body>
+</html>
