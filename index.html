@@ -2825,6 +2825,396 @@
       }
     }
 
+  
+    /* === top-level data category selector: reserved / confirmed === */
+    .data-mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .data-mode-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 66px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(30,40,56,.80), rgba(12,18,28,.94));
+      box-shadow: 0 0 0 2px rgba(0,0,0,.50), inset 0 1px 0 rgba(255,255,255,.10), 0 8px 16px rgba(0,0,0,.18);
+      transition: transform .16s ease, filter .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .data-mode-card::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.040) 0 2px, transparent 2px 6px), radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 30%);
+    }
+    .data-mode-card input { display: none; }
+    .data-mode-card > span:not(.data-mode-dot) { position: relative; z-index: 1; }
+    .data-mode-dot {
+      position: relative;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.50);
+      background: rgba(0,0,0,.20);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
+      flex: 0 0 auto;
+    }
+    .data-mode-card .text {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: .7px;
+      color: #f8fff8;
+      text-shadow: -1px 0 0 rgba(22,217,194,.28), 1px 0 0 rgba(255,76,147,.22), 0 2px 0 rgba(0,0,0,.60);
+    }
+    .data-mode-card .sub {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: rgba(233,240,247,.66);
+      font-weight: 800;
+    }
+    .data-mode-card:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05) saturate(1.02);
+      border-color: rgba(148, 215, 255, .42);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.52), 0 0 0 5px rgba(110,197,255,.10), inset 0 1px 0 rgba(255,255,255,.14), 0 12px 20px rgba(0,0,0,.20);
+    }
+    .data-mode-card.selected {
+      transform: translateY(-1px);
+      border-color: rgba(136, 224, 255, .58);
+      background: linear-gradient(180deg, rgba(37,67,108,.96), rgba(17,32,58,.96));
+      box-shadow: 0 0 0 2px rgba(0,0,0,.54), 0 0 0 6px rgba(84,197,255,.12), inset 0 1px 0 rgba(255,255,255,.18), 0 14px 22px rgba(0,0,0,.24);
+    }
+    .data-mode-card.selected .data-mode-dot {
+      border-color: rgba(255,255,255,.92);
+      background: radial-gradient(circle at center, #ffffff 0 42%, transparent 44% 100%);
+    }
+    .confirmed-placeholder {
+      display: none;
+      min-height: 300px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+      border-radius: 18px;
+      border: 2px solid rgba(255,255,255,.14);
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.030) 0 2px, transparent 2px 6px), linear-gradient(180deg, rgba(14,24,38,.76), rgba(6,13,24,.86));
+      box-shadow: 0 0 0 2px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.06), 0 14px 30px rgba(0,0,0,.22);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex-direction: column;
+      padding: 26px;
+      box-sizing: border-box;
+    }
+    .confirmed-placeholder.show {
+      display: flex;
+      animation: featureContentIn .28s ease both;
+    }
+    @media (max-width: 900px) {
+      .data-mode-grid { grid-template-columns: 1fr; }
+      .confirmed-placeholder { min-height: 260px; }
+    }
+
+  
+    /* === confirmed data: Osaka / Tokyo category cards === */
+    .confirmed-type-grid {
+      width: min(760px, 100%);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 22px;
+    }
+    .confirmed-type-card {
+      position: relative;
+      min-height: 112px;
+      padding: 18px 16px;
+      border-radius: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.14);
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, rgba(28,38,54,.88), rgba(9,17,29,.95));
+      box-shadow:
+        0 0 0 2px rgba(0,0,0,.50),
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 12px 20px rgba(0,0,0,.20);
+      transition: transform .16s ease, filter .18s ease, border-color .18s ease, box-shadow .18s ease;
+      text-align: left;
+    }
+    .confirmed-type-card::before {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(255,255,255,.10), transparent 28%),
+        linear-gradient(135deg, rgba(92,245,209,.08), transparent 44%, rgba(255,76,147,.08));
+    }
+    .confirmed-type-card input { display: none; }
+    .confirmed-type-card > span {
+      position: relative;
+      z-index: 1;
+    }
+    .confirmed-type-rank {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      font-size: 16px;
+      font-weight: 1000;
+      letter-spacing: .5px;
+      color: rgba(248,255,248,.96);
+      background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.18);
+      text-shadow:
+        -1px 0 rgba(22,217,194,.30),
+         1px 0 rgba(255,76,147,.24),
+         0 2px 0 rgba(0,0,0,.62);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 16px rgba(0,0,0,.18);
+    }
+    .confirmed-type-card .text {
+      font-size: 18px;
+      font-weight: 1000;
+      color: #f8fff8;
+      text-shadow:
+        -1px 0 0 rgba(22,217,194,.26),
+         1px 0 0 rgba(255,76,147,.22),
+         0 2px 0 rgba(0,0,0,.60);
+    }
+    .confirmed-type-card .sub {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233,240,247,.66);
+      font-weight: 800;
+    }
+    .confirmed-type-card:hover {
+      transform: translateY(-3px) rotate(-.3deg);
+      filter: brightness(1.06) saturate(1.04);
+      border-color: rgba(148,215,255,.42);
+      box-shadow:
+        0 0 0 2px rgba(0,0,0,.52),
+        0 0 0 6px rgba(110,197,255,.10),
+        inset 0 1px 0 rgba(255,255,255,.15),
+        0 16px 24px rgba(0,0,0,.24);
+    }
+    .confirmed-type-card.selected {
+      transform: translateY(-2px);
+      border-color: rgba(136,224,255,.64);
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.036) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, rgba(37,67,108,.96), rgba(15,30,54,.96));
+      box-shadow:
+        0 0 0 2px rgba(0,0,0,.54),
+        0 0 0 7px rgba(84,197,255,.13),
+        inset 0 1px 0 rgba(255,255,255,.18),
+        0 18px 26px rgba(0,0,0,.26);
+    }
+    .confirmed-rule-slot {
+      width: min(760px, 100%);
+      margin-top: 16px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px dashed rgba(255,255,255,.16);
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 6px),
+        rgba(255,255,255,.035);
+      color: rgba(233,240,247,.72);
+      font-size: 13px;
+      line-height: 1.6;
+      font-weight: 800;
+      box-sizing: border-box;
+    }
+    .tao-library-panel {
+      width: min(760px, 100%);
+      margin-top: 12px;
+      display: none;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(136,224,255,.18);
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, rgba(16, 28, 48, .72), rgba(8, 14, 25, .74));
+      color: rgba(233,240,247,.78);
+      box-sizing: border-box;
+    }
+    .tao-library-panel.show {
+      display: block;
+    }
+    .tao-library-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .tao-library-title {
+      color: #f8fff8;
+      font-size: 14px;
+      font-weight: 1000;
+    }
+    .tao-library-count {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233,240,247,.62);
+      font-weight: 800;
+    }
+    button.tao-action-button {
+      width: auto;
+      margin: 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1;
+      background: #2563eb;
+      white-space: nowrap;
+      box-shadow: 0 8px 18px rgba(0,0,0,.20);
+    }
+    button.tao-action-button.secondary {
+      background: rgba(255,255,255,.12);
+      color: rgba(248,255,248,.92);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    button.tao-action-button:hover {
+      background: #1d4ed8;
+    }
+    button.tao-action-button.secondary:hover {
+      background: rgba(255,255,255,.18);
+    }
+    .tao-library-dialog {
+      width: min(640px, calc(100vw - 32px));
+      border: 1px solid rgba(136,224,255,.28);
+      border-radius: 18px;
+      padding: 0;
+      color: #f8fff8;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, rgba(20,34,58,.98), rgba(7,14,25,.98));
+      box-shadow: 0 24px 70px rgba(0,0,0,.55);
+      overflow: hidden;
+    }
+    .tao-library-dialog::backdrop {
+      background: rgba(0, 0, 0, .58);
+      backdrop-filter: blur(4px);
+    }
+    .tao-dialog-body {
+      padding: 18px;
+    }
+    .tao-dialog-title {
+      font-size: 18px;
+      font-weight: 1000;
+      margin-bottom: 6px;
+    }
+    .tao-dialog-sub {
+      font-size: 12px;
+      line-height: 1.55;
+      color: rgba(233,240,247,.66);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    #taoMasterInput {
+      width: 100%;
+      min-height: 210px;
+      box-sizing: border-box;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.18);
+      padding: 12px;
+      color: #f8fff8;
+      background: rgba(0,0,0,.24);
+      font-family: Consolas, "Microsoft YaHei", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      outline: none;
+    }
+    #taoMasterInput:focus {
+      border-color: rgba(136,224,255,.64);
+      box-shadow: 0 0 0 3px rgba(84,197,255,.12);
+    }
+    .tao-sync-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .tao-sync-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .tao-sync-field label {
+      font-size: 11px;
+      color: rgba(233,240,247,.62);
+      font-weight: 900;
+    }
+    .tao-sync-field input {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.18);
+      padding: 10px 11px;
+      color: #f8fff8;
+      background: rgba(0,0,0,.24);
+      font-size: 12px;
+      outline: none;
+    }
+    .tao-sync-field input:focus {
+      border-color: rgba(136,224,255,.64);
+      box-shadow: 0 0 0 3px rgba(84,197,255,.12);
+    }
+    .tao-sync-status {
+      min-height: 18px;
+      margin-top: 10px;
+      color: rgba(233,240,247,.66);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+    .tao-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 900px) {
+      .confirmed-type-grid { grid-template-columns: 1fr; }
+      .confirmed-type-card { min-height: 96px; }
+      .tao-library-head { align-items: flex-start; flex-direction: column; }
+      .tao-sync-grid { grid-template-columns: 1fr; }
+      button.tao-action-button { width: 100%; }
+    }
+
+  
+    /* === fix: ensure confirmed Osaka/Tokyo choices appear when clicking 确定数据 === */
+    #confirmedDataPanel.confirmed-placeholder.show {
+      display: flex !important;
+    }
+    #reservedDataPanel[style*="display: none"] + #confirmedDataPanel.confirmed-placeholder.show,
+    #confirmedDataPanel.show {
+      display: flex !important;
+    }
+
   </style>
 </head>
 <body>
@@ -2856,7 +3246,28 @@
       </details>
     </div>
 
-    <div class="section-title">② 选择类型</div>
+    <div class="section-title">② 数据分类</div>
+    <div class="data-mode-grid" id="dataModeGroup">
+      <label class="data-mode-card selected">
+        <input type="radio" name="dataMode" value="reserved" checked />
+        <span class="data-mode-dot"></span>
+        <span>
+          <div class="text">预定数据</div>
+          <div class="sub">当前已完成：ISLS 预定数据处理</div>
+        </span>
+      </label>
+      <label class="data-mode-card">
+        <input type="radio" name="dataMode" value="confirmed" />
+        <span class="data-mode-dot"></span>
+        <span>
+          <div class="text">确定数据</div>
+          <div class="sub">后续继续追加确定数据分类</div>
+        </span>
+      </label>
+    </div>
+
+    <div id="reservedDataPanel">
+    <div class="section-title">③ 选择类型</div>
     <div class="type-grid" id="typeGroup">
       <label class="radio-card selected">
         <input type="radio" name="shipType" value="cainiao_osaka" checked />
@@ -2992,6 +3403,77 @@
       </div>
     </div>
 
+    </div>
+
+    <div id="confirmedDataPanel" class="confirmed-placeholder">
+      <div class="feature-kicker">确定数据</div>
+      <div class="feature-title">选择确定数据模板</div>
+      <div class="feature-sub">
+        大阪按请求码拆分，东京按TAO主单号库拆分，并保留原CSV编码导出。
+      </div>
+
+      <div class="confirmed-type-grid" id="confirmedTypeGroup">
+        <label class="confirmed-type-card selected">
+          <input type="radio" name="confirmedType" value="osaka" checked />
+          <span class="confirmed-type-rank">OSK</span>
+          <span>
+            <div class="text">大阪确定数据</div>
+            <div class="sub">筛选YNE / MMA / RG / NY</div>
+          </span>
+        </label>
+
+        <label class="confirmed-type-card">
+          <input type="radio" name="confirmedType" value="tokyo" />
+          <span class="confirmed-type-rank">TYO</span>
+          <span>
+            <div class="text">东京确定数据</div>
+            <div class="sub">按TAO主单号库拆分</div>
+          </span>
+        </label>
+      </div>
+
+      <div class="confirmed-rule-slot" id="confirmedRuleSlot">
+        当前选择：大阪确定数据。上传混合代理店确定数据后，会把YNE / MMA / RG / NY拆到菜鸟大阪账号确定数据，其余行拆到普通大阪账号确定数据。
+      </div>
+
+      <div class="tao-library-panel" id="taoLibraryPanel">
+        <div class="tao-library-head">
+          <div>
+            <div class="tao-library-title">TAO主单号库</div>
+            <div class="tao-library-count" id="taoLibraryCount">内置0个，新增0个，合计0个</div>
+          </div>
+          <button id="taoLibraryOpenBtn" class="tao-action-button" type="button">新增/管理主单号</button>
+        </div>
+      </div>
+    </div>
+
+    <dialog id="taoLibraryDialog" class="tao-library-dialog">
+      <div class="tao-dialog-body">
+        <div class="tao-dialog-title">TAO主单号库</div>
+        <div class="tao-dialog-sub">
+          每行一个主单号，也可以用逗号、空格或顿号分隔。保存后会留在本机浏览器里，之后处理东京确定数据时自动参与匹配。
+        </div>
+        <textarea id="taoMasterInput" spellcheck="false"></textarea>
+        <div class="tao-sync-grid">
+          <div class="tao-sync-field">
+            <label for="taoSyncUrl">共享库同步地址</label>
+            <input id="taoSyncUrl" type="text" placeholder="https://your-worker.workers.dev" />
+          </div>
+          <div class="tao-sync-field">
+            <label for="taoSyncKey">内部同步密钥</label>
+            <input id="taoSyncKey" type="password" placeholder="只保存在本机浏览器" />
+          </div>
+        </div>
+        <div class="tao-sync-status" id="taoSyncStatus"></div>
+        <div class="tao-dialog-actions">
+          <button id="taoLibraryFetchBtn" class="tao-action-button secondary" type="button">读取共享库</button>
+          <button id="taoLibrarySyncBtn" class="tao-action-button" type="button">同步到共享库</button>
+          <button id="taoLibraryCloseBtn" class="tao-action-button secondary" type="button">关闭</button>
+          <button id="taoLibrarySaveBtn" class="tao-action-button secondary" type="button">保存本机新增</button>
+        </div>
+      </div>
+    </dialog>
+
     <button id="runBtn">开始修正并下载结果</button>
     <div id="log" class="log">等待上传CSV...</div>
   </div>
@@ -3014,6 +3496,31 @@
     CJ:  { label: "CJ",  r: "0724636801", s: "015" },
     CNE: { label: "CNE", r: "0724636801", s: "044" }
   };
+
+  const CONFIRMED_OSAKA_TO_CAINIAO_AGENTS = ["YNE", "MMA", "RG", "NY"];
+  const BUILTIN_TAO_MASTER_NUMBERS = [
+    "20533737826",
+    "16012400135",
+    "11206735153",
+    "16012400673",
+    "11206735304",
+    "11206736903",
+    "11206735805",
+    "11206737043",
+    "11206737183",
+    "11206017830",
+    "11206872880",
+    "20585494205",
+    "20585513234",
+    "11206874066",
+    "16012400695",
+    "11206874792",
+    "16013562161"
+  ];
+  const TAO_MASTER_STORAGE_KEY = "isls_tao_master_numbers_v1";
+  const TAO_REMOTE_MASTER_STORAGE_KEY = "isls_tao_remote_master_numbers_v1";
+  const TAO_SYNC_URL_STORAGE_KEY = "isls_tao_sync_url_v1";
+  const TAO_SYNC_KEY_STORAGE_KEY = "isls_tao_sync_key_v1";
 
   function log(message) {
     $("log").textContent += "\n" + message;
@@ -3266,6 +3773,9 @@
       reader.onload = (e) => {
         try {
           const bytes = new Uint8Array(e.target.result);
+          const hasUtf8Bom = bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+          const hasUtf16LeBom = bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE;
+          const hasUtf16BeBom = bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF;
           let detected = Encoding.detect(bytes);
           if (!detected) detected = "SJIS";
 
@@ -3279,7 +3789,7 @@
           const wb = XLSX.read(text, { type: "string", raw: true });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
-          resolve({ rows, detected });
+          resolve({ rows, detected, hasUtf8Bom, hasUtf16LeBom, hasUtf16BeBom });
         } catch (err) {
           reject(err);
         }
@@ -3314,6 +3824,230 @@
 
   function normalizeSortCodeKey(value) {
     return cleanSpaces(value);
+  }
+
+  function toHalfWidthAscii(value) {
+    return toText(value)
+      .replace(/\u3000/g, " ")
+      .replace(/[！-～]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  }
+
+  function normalizeMasterNumber(value) {
+    return toHalfWidthAscii(value)
+      .replace(/[\t\r\n ]+/g, "")
+      .trim();
+  }
+
+  function uniqueNormalizedList(values) {
+    const seen = new Set();
+    const out = [];
+    values.forEach(value => {
+      const normalized = normalizeMasterNumber(value);
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      out.push(normalized);
+    });
+    return out;
+  }
+
+  function parseMasterNumbers(text) {
+    return uniqueNormalizedList(toHalfWidthAscii(text).split(/[\s,，、;；]+/));
+  }
+
+  function getStoredTaoMasterNumbers() {
+    try {
+      const raw = localStorage.getItem(TAO_MASTER_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return uniqueNormalizedList(parsed);
+      return parseMasterNumbers(raw);
+    } catch (err) {
+      console.warn("读取TAO主单号库失败", err);
+      return [];
+    }
+  }
+
+  function saveStoredTaoMasterNumbers(list) {
+    const normalized = uniqueNormalizedList(list);
+    localStorage.setItem(TAO_MASTER_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function getRemoteTaoMasterNumbers() {
+    try {
+      const raw = localStorage.getItem(TAO_REMOTE_MASTER_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return uniqueNormalizedList(parsed);
+      return parseMasterNumbers(raw);
+    } catch (err) {
+      console.warn("读取TAO共享主单号库失败", err);
+      return [];
+    }
+  }
+
+  function saveRemoteTaoMasterNumbers(list) {
+    const normalized = uniqueNormalizedList(list);
+    localStorage.setItem(TAO_REMOTE_MASTER_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function getBuiltinTaoMasterNumbers() {
+    return uniqueNormalizedList(BUILTIN_TAO_MASTER_NUMBERS);
+  }
+
+  function getTaoMasterLibrary() {
+    return uniqueNormalizedList(
+      getBuiltinTaoMasterNumbers()
+        .concat(getRemoteTaoMasterNumbers())
+        .concat(getStoredTaoMasterNumbers())
+    );
+  }
+
+  function getTaoSyncConfig() {
+    return {
+      url: localStorage.getItem(TAO_SYNC_URL_STORAGE_KEY) || "",
+      key: localStorage.getItem(TAO_SYNC_KEY_STORAGE_KEY) || ""
+    };
+  }
+
+  function setTaoSyncStatus(message) {
+    const status = $("taoSyncStatus");
+    if (status) status.textContent = message || "";
+  }
+
+  function buildTaoSyncEndpoint(url) {
+    const clean = toText(url).trim().replace(/\/+$/, "");
+    if (!clean) return "";
+    return /\/tao-masters$/i.test(clean) ? clean : clean + "/tao-masters";
+  }
+
+  function saveTaoSyncConfigFromInput() {
+    const url = $("taoSyncUrl") ? $("taoSyncUrl").value.trim() : "";
+    const key = $("taoSyncKey") ? $("taoSyncKey").value : "";
+    localStorage.setItem(TAO_SYNC_URL_STORAGE_KEY, url);
+    localStorage.setItem(TAO_SYNC_KEY_STORAGE_KEY, key);
+    return { url, key };
+  }
+
+  async function requestTaoSharedLibrary(method, masters) {
+    const config = saveTaoSyncConfigFromInput();
+    const endpoint = buildTaoSyncEndpoint(config.url);
+    if (!endpoint || !config.key) {
+      throw new Error("请先填写共享库同步地址和内部同步密钥。");
+    }
+
+    const options = {
+      method,
+      headers: {
+        "Authorization": "Bearer " + config.key
+      }
+    };
+    if (method !== "GET") {
+      options.headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify({ masters: uniqueNormalizedList(masters || []) });
+    }
+
+    const res = await fetch(endpoint, options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (err) {
+      data = { error: "后端返回不是JSON。" };
+    }
+    if (!res.ok || !data || data.ok === false) {
+      throw new Error(data && data.error ? data.error : "共享库同步失败。");
+    }
+    return data;
+  }
+
+  async function fetchTaoSharedLibrary(showLog = true) {
+    try {
+      setTaoSyncStatus("正在读取共享库...");
+      const data = await requestTaoSharedLibrary("GET");
+      const remote = saveRemoteTaoMasterNumbers(data.masters || []);
+      refreshTaoLibraryUI();
+      setTaoSyncStatus("共享库读取完成，共" + remote.length + "个。");
+      if (showLog) resetLog("TAO共享主单号库读取完成，共" + remote.length + "个。");
+      return remote;
+    } catch (err) {
+      setTaoSyncStatus(err.message);
+      if (showLog) resetLog("读取TAO共享主单号库失败：\n" + err.message);
+      throw err;
+    }
+  }
+
+  async function syncTaoLibraryToShared() {
+    try {
+      const input = $("taoMasterInput");
+      const localAdditions = saveStoredTaoMasterNumbers(parseMasterNumbers(input ? input.value : ""));
+      if (!localAdditions.length) {
+        setTaoSyncStatus("没有本机新增主单号需要同步。");
+        return;
+      }
+
+      setTaoSyncStatus("正在同步到共享库...");
+      const data = await requestTaoSharedLibrary("POST", localAdditions);
+      const remote = saveRemoteTaoMasterNumbers(data.masters || []);
+      saveStoredTaoMasterNumbers([]);
+      if (input) input.value = "";
+      refreshTaoLibraryUI();
+      setTaoSyncStatus("同步完成，共享库现有" + remote.length + "个。");
+      resetLog("TAO主单号已同步到共享库。本次提交" + localAdditions.length + "个，共享库现有" + remote.length + "个。");
+    } catch (err) {
+      setTaoSyncStatus(err.message);
+      resetLog("同步TAO主单号到共享库失败：\n" + err.message);
+    }
+  }
+
+  function refreshTaoLibraryUI() {
+    const panel = $("taoLibraryPanel");
+    const count = $("taoLibraryCount");
+    const input = $("taoMasterInput");
+    const urlInput = $("taoSyncUrl");
+    const keyInput = $("taoSyncKey");
+    const type = getSelectedConfirmedType ? getSelectedConfirmedType() : "osaka";
+    if (panel) panel.classList.toggle("show", type === "tokyo");
+
+    const builtin = getBuiltinTaoMasterNumbers();
+    const remote = getRemoteTaoMasterNumbers();
+    const stored = getStoredTaoMasterNumbers();
+    const all = getTaoMasterLibrary();
+    const config = getTaoSyncConfig();
+    if (count) count.textContent = `内置${builtin.length}个，共享${remote.length}个，本机新增${stored.length}个，合计${all.length}个`;
+    if (input && document.activeElement !== input) input.value = stored.join("\n");
+    if (urlInput && document.activeElement !== urlInput) urlInput.value = config.url;
+    if (keyInput && document.activeElement !== keyInput) keyInput.value = config.key;
+  }
+
+  function openTaoLibraryDialog() {
+    const dialog = $("taoLibraryDialog");
+    const input = $("taoMasterInput");
+    if (input) input.value = getStoredTaoMasterNumbers().join("\n");
+    if (dialog && typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else if (dialog) {
+      dialog.setAttribute("open", "open");
+    }
+    if (input) input.focus();
+  }
+
+  function closeTaoLibraryDialog() {
+    const dialog = $("taoLibraryDialog");
+    if (dialog && typeof dialog.close === "function") {
+      dialog.close();
+    } else if (dialog) {
+      dialog.removeAttribute("open");
+    }
+  }
+
+  function saveTaoLibraryFromInput() {
+    const input = $("taoMasterInput");
+    const saved = saveStoredTaoMasterNumbers(parseMasterNumbers(input ? input.value : ""));
+    if (input) input.value = saved.join("\n");
+    refreshTaoLibraryUI();
+    closeTaoLibraryDialog();
+    resetLog("TAO主单号已保存到本机新增库。当前本机新增" + saved.length + "个。");
   }
 
   function findFromSecondCharAfterPrefecture(s, chars) {
@@ -3545,6 +4279,322 @@
     URL.revokeObjectURL(link.href);
   }
 
+  function rowsToCsvExact(rows) {
+    return rows.map(row => {
+      const cells = [];
+      const source = row || [];
+      for (let i = 0; i < source.length; i++) {
+        cells.push(csvEscape(source[i] != null ? source[i] : ""));
+      }
+      return cells.join(",");
+    }).join("\r\n");
+  }
+
+  function normalizeDetectedEncoding(detected) {
+    const enc = String(detected || "").toUpperCase().replace(/[-_\s]/g, "");
+    if (enc.includes("SJIS") || enc.includes("SHIFTJIS")) {
+      return { name: "SJIS", charset: "Shift_JIS" };
+    }
+    if (enc.includes("EUCJP")) {
+      return { name: "EUCJP", charset: "EUC-JP" };
+    }
+    if (enc.includes("UTF16") || enc === "UNICODE") {
+      return { name: "UTF16", charset: "UTF-16" };
+    }
+    return { name: "UTF8", charset: "UTF-8" };
+  }
+
+  function downloadCsvKeepingEncoding(csvText, outputName, detected, sourceInfo = {}) {
+    const target = normalizeDetectedEncoding(detected);
+    let bytes = Encoding.convert(csvText, {
+      to: target.name,
+      from: "UNICODE",
+      type: "array"
+    });
+
+    if (target.name === "UTF8" && sourceInfo.hasUtf8Bom) {
+      bytes = [0xEF, 0xBB, 0xBF].concat(bytes);
+    }
+
+    const blob = new Blob([new Uint8Array(bytes)], { type: `text/csv;charset=${target.charset}` });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = outputName;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  function formatDateTimeForFile(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return [
+      date.getFullYear(),
+      pad(date.getMonth() + 1),
+      pad(date.getDate())
+    ].join("") + "_" + [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join("");
+  }
+
+  function normalizeRequestCodePart(value) {
+    let s = toHalfWidthDigits(toText(value))
+      .replace(/[．。]/g, ".")
+      .replace(/[\t\r\n\u3000 ]+/g, "")
+      .trim();
+    if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+    return s;
+  }
+
+  function requestPartMatches(value, expected) {
+    const actual = normalizeRequestCodePart(value);
+    const target = normalizeRequestCodePart(expected);
+    if (actual === target) return true;
+    if (!actual || !target) return false;
+    if (/^\d+$/.test(actual) && /^\d+$/.test(target)) {
+      return actual.replace(/^0+/, "") === target.replace(/^0+/, "");
+    }
+    return false;
+  }
+
+  function getConfirmedOsakaCainiaoAgent(row) {
+    return CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.find(agent => {
+      const setting = AGENT_SETTINGS[agent];
+      return requestPartMatches(row[0], setting.r) && requestPartMatches(row[1], setting.s);
+    }) || "";
+  }
+
+  function parseWeightNumber(value) {
+    const s = toHalfWidthDigits(toText(value))
+      .replace(/[．。]/g, ".")
+      .replace(/,/g, "")
+      .trim();
+    const match = s.match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : NaN;
+  }
+
+  function capConfirmedWeight(row, rowNo, weightDetails) {
+    const COL_TRACKING = 2;
+    const COL_WEIGHT = 4;
+    const original = toText(row[COL_WEIGHT]);
+    const weight = parseWeightNumber(original);
+    if (!Number.isFinite(weight) || weight <= 25) return false;
+
+    const trackingNo = toText(row[COL_TRACKING]).trim() || "空";
+    row[COL_WEIGHT] = "25";
+    weightDetails.push(`单号${trackingNo}，第${rowNo}行，重量${original}改为25`);
+    return true;
+  }
+
+  async function processOsakaConfirmedData() {
+    try {
+      resetLog("大阪确定数据处理中...");
+
+      const file = $("csvFile").files[0];
+      if (!file) {
+        alert("请先上传CSV文件。");
+        resetLog("等待上传CSV...");
+        return;
+      }
+
+      const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
+      log("读取CSV...");
+      const source = await readCsvFile(file);
+      const rows = source.rows;
+      const cainiaoSetting = SHIP_SETTINGS.cainiao_osaka;
+
+      log("读取编码: " + source.detected + "（导出保持该编码）");
+      log("总行数: " + rows.length);
+      log("开始行: 第" + (startRow + 1) + "行");
+      log("筛选代理店: " + CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.join(" / "));
+      log("菜鸟大阪请求码: " + cainiaoSetting.r + "," + cainiaoSetting.s);
+
+      const headerRows = rows.slice(0, startRow).map(row => (row || []).slice());
+      const cainiaoRows = headerRows.map(row => row.slice());
+      const normalRows = headerRows.map(row => row.slice());
+      const weightDetails = [];
+      const agentCounts = {};
+      CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.forEach(agent => agentCounts[agent] = 0);
+
+      let processed = 0;
+      let emptyRows = 0;
+      let cainiaoCount = 0;
+      let normalCount = 0;
+
+      for (let r = startRow; r < rows.length; r++) {
+        const sourceRow = rows[r] || [];
+        if (isEmptyRow(sourceRow)) {
+          emptyRows++;
+          continue;
+        }
+
+        processed++;
+        const rowNo = r + 1;
+        const row = sourceRow.slice();
+        const agent = getConfirmedOsakaCainiaoAgent(row);
+
+        capConfirmedWeight(row, rowNo, weightDetails);
+
+        if (agent) {
+          row[0] = cainiaoSetting.r;
+          row[1] = cainiaoSetting.s;
+          cainiaoRows.push(row);
+          cainiaoCount++;
+          agentCounts[agent]++;
+        } else {
+          normalRows.push(row);
+          normalCount++;
+        }
+      }
+
+      const timestamp = formatDateTimeForFile();
+      const cainiaoName = `菜鸟大阪账号确定数据_${timestamp}.csv`;
+      const normalName = `普通大阪账号确定数据_${timestamp}.csv`;
+
+      downloadCsvKeepingEncoding(rowsToCsvExact(cainiaoRows), cainiaoName, source.detected, source);
+      window.setTimeout(() => {
+        downloadCsvKeepingEncoding(rowsToCsvExact(normalRows), normalName, source.detected, source);
+      }, 250);
+
+      log("\n拆分完成。");
+      log("处理数据行数: " + processed);
+      log("空白行跳过: " + emptyRows);
+      log("菜鸟大阪账号确定数据行数: " + cainiaoCount);
+      log("普通大阪账号确定数据行数: " + normalCount);
+      CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.forEach(agent => {
+        log(agent + " 转为菜鸟大阪请求码: " + agentCounts[agent]);
+      });
+
+      if (weightDetails.length) {
+        log("\n重量修正明细:");
+        weightDetails.forEach(d => log(d));
+      } else {
+        log("\n没有发现超过25的重量。");
+      }
+
+      log("\n已生成下载文件: " + cainiaoName);
+      log("已生成下载文件: " + normalName);
+    } catch (err) {
+      console.error(err);
+      resetLog("出错了：\n" + err.message);
+    }
+  }
+
+  async function processTokyoConfirmedData() {
+    try {
+      resetLog("东京确定数据处理中...");
+
+      const file = $("csvFile").files[0];
+      if (!file) {
+        alert("请先上传CSV文件。");
+        resetLog("等待上传CSV...");
+        return;
+      }
+
+      const startRow = Math.max(1, parseInt($("startRow").value, 10) || 1) - 1;
+      log("读取CSV...");
+      const source = await readCsvFile(file);
+      const rows = source.rows;
+      const cainiaoSetting = SHIP_SETTINGS.cainiao_tokyo;
+      const normalSetting = SHIP_SETTINGS.normal_tokyo;
+      const taoMasters = getTaoMasterLibrary();
+      const taoMasterSet = new Set(taoMasters);
+
+      log("读取编码: " + source.detected + "（导出保持该编码）");
+      log("总行数: " + rows.length);
+      log("开始行: 第" + (startRow + 1) + "行");
+      log("TAO主单号库数量: " + taoMasters.length);
+      log("菜鸟东京请求码: " + cainiaoSetting.r + "," + cainiaoSetting.s);
+      log("普通东京请求码: " + normalSetting.r + "," + normalSetting.s);
+      if (!taoMasters.length) {
+        log("TAO主单号库为空，本次所有行都会进入普通东京账号确定数据。");
+      }
+
+      const headerRows = rows.slice(0, startRow).map(row => (row || []).slice());
+      const cainiaoRows = headerRows.map(row => row.slice());
+      const normalRows = headerRows.map(row => row.slice());
+      const weightDetails = [];
+      const taoDetails = [];
+      const taoDetailLimit = 80;
+
+      let processed = 0;
+      let emptyRows = 0;
+      let cainiaoCount = 0;
+      let normalCount = 0;
+
+      for (let r = startRow; r < rows.length; r++) {
+        const sourceRow = rows[r] || [];
+        if (isEmptyRow(sourceRow)) {
+          emptyRows++;
+          continue;
+        }
+
+        processed++;
+        const rowNo = r + 1;
+        const row = sourceRow.slice();
+        const masterNo = normalizeMasterNumber(row[3]);
+
+        capConfirmedWeight(row, rowNo, weightDetails);
+
+        if (masterNo && taoMasterSet.has(masterNo)) {
+          row[0] = cainiaoSetting.r;
+          row[1] = cainiaoSetting.s;
+          cainiaoRows.push(row);
+          cainiaoCount++;
+          if (taoDetails.length < taoDetailLimit) {
+            taoDetails.push(`第${rowNo}行，主单号${masterNo}，转为菜鸟东京请求码`);
+          }
+        } else {
+          row[0] = normalSetting.r;
+          row[1] = normalSetting.s;
+          normalRows.push(row);
+          normalCount++;
+        }
+      }
+
+      const timestamp = formatDateTimeForFile();
+      const cainiaoName = `菜鸟东京账号确定数据_${timestamp}.csv`;
+      const normalName = `普通东京账号确定数据_${timestamp}.csv`;
+
+      downloadCsvKeepingEncoding(rowsToCsvExact(cainiaoRows), cainiaoName, source.detected, source);
+      window.setTimeout(() => {
+        downloadCsvKeepingEncoding(rowsToCsvExact(normalRows), normalName, source.detected, source);
+      }, 250);
+
+      log("\n拆分完成。");
+      log("处理数据行数: " + processed);
+      log("空白行跳过: " + emptyRows);
+      log("菜鸟东京账号确定数据行数: " + cainiaoCount);
+      log("普通东京账号确定数据行数: " + normalCount);
+
+      if (taoDetails.length) {
+        log("\nTAO主单号命中明细（最多显示" + taoDetailLimit + "条）:");
+        taoDetails.forEach(d => log(d));
+        if (cainiaoCount > taoDetailLimit) log("TAO命中明细过多，后续省略。");
+      } else {
+        log("\n没有命中TAO主单号库的行。");
+      }
+
+      if (weightDetails.length) {
+        log("\n重量修正明细:");
+        weightDetails.forEach(d => log(d));
+      } else {
+        log("\n没有发现超过25的重量。");
+      }
+
+      log("\n已生成下载文件: " + cainiaoName);
+      log("已生成下载文件: " + normalName);
+    } catch (err) {
+      console.error(err);
+      resetLog("出错了：\n" + err.message);
+    }
+  }
+
+  async function processConfirmedData() {
+    const confirmedType = getSelectedConfirmedType();
+    if (confirmedType === "tokyo") {
+      await processTokyoConfirmedData();
+      return;
+    }
+    await processOsakaConfirmedData();
+  }
+
   function getSelectedValue(name) {
     const el = document.querySelector(`input[name="${name}"]:checked`);
     return el ? el.value : "";
@@ -3668,6 +4718,69 @@
     }, 900);
   }
 
+
+  function getSelectedDataMode() {
+    const checked = document.querySelector("input[name='dataMode']:checked");
+    return checked ? checked.value : "reserved";
+  }
+
+
+  function getSelectedConfirmedType() {
+    const checked = document.querySelector("input[name='confirmedType']:checked");
+    return checked ? checked.value : "osaka";
+  }
+
+  function refreshConfirmedTypeUI() {
+    const type = getSelectedConfirmedType();
+    document.querySelectorAll(".confirmed-type-card").forEach(card => {
+      const input = card.querySelector("input[type='radio']");
+      card.classList.toggle("selected", input && input.checked);
+    });
+
+    const slot = $("confirmedRuleSlot");
+    if (slot) {
+      const label = type === "tokyo" ? "东京确定数据" : "大阪确定数据";
+      slot.textContent = type === "tokyo"
+        ? `当前选择：${label}。D列主单号命中TAO库的行会拆到菜鸟东京账号确定数据，其余行拆到普通东京账号确定数据。`
+        : `当前选择：${label}。上传混合代理店确定数据后，会把YNE / MMA / RG / NY拆到菜鸟大阪账号确定数据，其余行拆到普通大阪账号确定数据。`;
+    }
+    refreshTaoLibraryUI();
+
+    const runBtn = $("runBtn");
+    if (runBtn && getSelectedDataMode && getSelectedDataMode() === "confirmed") {
+      runBtn.textContent = type === "tokyo" ? "处理东京确定数据并下载" : "处理大阪确定数据并下载";
+      runBtn.disabled = false;
+    }
+  }
+
+  function refreshDataModeUI() {
+    const mode = getSelectedDataMode();
+
+    document.querySelectorAll(".data-mode-card").forEach(card => {
+      const input = card.querySelector("input[type='radio']");
+      card.classList.toggle("selected", input && input.checked);
+    });
+
+    const reservedPanel = $("reservedDataPanel");
+    const confirmedPanel = $("confirmedDataPanel");
+
+    if (reservedPanel) reservedPanel.style.display = mode === "reserved" ? "" : "none";
+    if (confirmedPanel) confirmedPanel.classList.toggle("show", mode === "confirmed");
+
+    const runBtn = $("runBtn");
+    if (runBtn) {
+      if (mode === "confirmed") {
+        const confirmedType = getSelectedConfirmedType();
+        runBtn.textContent = confirmedType === "tokyo" ? "处理东京确定数据并下载" : "处理大阪确定数据并下载";
+        runBtn.disabled = false;
+        refreshConfirmedTypeUI();
+      } else {
+        runBtn.textContent = "开始修正并下载结果";
+        runBtn.disabled = false;
+      }
+    }
+  }
+
   function refreshSelectionUI(animateFeature = false) {
     document.querySelectorAll(".radio-card").forEach(card => {
       const input = card.querySelector("input[type='radio']");
@@ -3702,6 +4815,19 @@
     }
   }
 
+  document.querySelectorAll("input[name='dataMode']").forEach(input => {
+    input.addEventListener("change", () => {
+      refreshDataModeUI();
+      refreshSelectionUI(false);
+    });
+  });
+
+  document.querySelectorAll("input[name='confirmedType']").forEach(input => {
+    input.addEventListener("change", () => {
+      refreshConfirmedTypeUI();
+    });
+  });
+
   document.querySelectorAll("input[name='shipType']").forEach(input => {
     input.addEventListener("change", () => refreshSelectionUI(true));
   });
@@ -3733,9 +4859,24 @@
     $("refFile").files = dt.files;
     updateRefFileName();
   });
+  $("taoLibraryOpenBtn").addEventListener("click", openTaoLibraryDialog);
+  $("taoLibraryCloseBtn").addEventListener("click", closeTaoLibraryDialog);
+  $("taoLibrarySaveBtn").addEventListener("click", saveTaoLibraryFromInput);
+  $("taoLibraryFetchBtn").addEventListener("click", () => fetchTaoSharedLibrary(true));
+  $("taoLibrarySyncBtn").addEventListener("click", syncTaoLibraryToShared);
+  refreshConfirmedTypeUI();
+  refreshDataModeUI();
   refreshSelectionUI(false);
+  if (getTaoSyncConfig().url && getTaoSyncConfig().key) {
+    fetchTaoSharedLibrary(false).catch(err => console.warn("自动读取TAO共享主单号库失败", err));
+  }
 
   $("runBtn").addEventListener("click", async () => {
+    if (getSelectedDataMode() === "confirmed") {
+      await processConfirmedData();
+      return;
+    }
+
     try {
       resetLog("处理中...");
 
@@ -3978,4 +5119,3 @@
   </div>
 </body>
 </html>
-
