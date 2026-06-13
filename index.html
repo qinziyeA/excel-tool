@@ -1082,11 +1082,11 @@
       overflow: visible;
     }
     .feature-card-front {
-      transition: opacity .22s ease, transform .22s ease;
+      transition: opacity .14s ease, transform .14s ease;
     }
     .feature-stage.animating .feature-card-front {
-      opacity: 0;
-      transform: translateY(8px);
+      opacity: .18;
+      transform: translateY(4px);
       pointer-events: none;
     }
     .mode-flip-card {
@@ -4694,28 +4694,22 @@
     $("refUploadWrap").classList.toggle("show", zipEnabled);
   }
 
-  function playModeCardTransition(shipType) {
+  function fadeFeatureContentTransition(shipType) {
     const stage = $("featureStage");
     const card = $("modeFlipCard");
-    setModeCard(shipType);
 
     window.clearTimeout(featureAnimationTimer);
     window.clearTimeout(featureCleanupTimer);
 
     stage.classList.add("animating");
-    card.classList.remove("play");
-    void card.offsetWidth;
-    card.classList.add("play");
+    if (card) card.classList.remove("play");
 
-    // 牌上下翻转后约0.3秒淡出，再显示功能按钮/功能区。
     featureAnimationTimer = window.setTimeout(() => {
       applyFeatureContent(shipType);
-      stage.classList.remove("animating");
-    }, 760);
-
-    featureCleanupTimer = window.setTimeout(() => {
-      card.classList.remove("play");
-    }, 900);
+      window.requestAnimationFrame(() => {
+        stage.classList.remove("animating");
+      });
+    }, 90);
   }
 
 
@@ -4795,7 +4789,7 @@
     const changed = shipType !== lastShipType;
 
     if (animateFeature && changed) {
-      playModeCardTransition(shipType);
+      fadeFeatureContentTransition(shipType);
     } else {
       applyFeatureContent(shipType);
     }
