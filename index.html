@@ -2996,6 +2996,47 @@
       font-size: 12px;
       line-height: 1.5;
     }
+    .sagawa-history-notice {
+      display: none;
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(251,191,36,.32);
+      background: linear-gradient(180deg, rgba(120, 80, 18, .28), rgba(26, 17, 8, .34));
+      color: rgba(255,248,232,.9);
+      box-sizing: border-box;
+    }
+    .sagawa-history-notice.show {
+      display: block;
+    }
+    .sagawa-history-title {
+      font-size: 14px;
+      font-weight: 1000;
+      color: #fff8e8;
+    }
+    .sagawa-history-summary {
+      margin-top: 5px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(255,248,232,.72);
+      font-weight: 800;
+    }
+    .sagawa-history-list {
+      max-height: 180px;
+      overflow: auto;
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: rgba(255,248,232,.82);
+    }
+    .sagawa-history-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
     .sagawa-note {
       margin-top: 6px;
       color: rgba(233,240,247,.66);
@@ -3642,6 +3683,17 @@
           </div>
         </div>
       </div>
+
+      <div id="sagawaHistoryNotice" class="sagawa-history-notice">
+        <div class="sagawa-history-title">检测到已制作过的佐川数据</div>
+        <div id="sagawaHistorySummary" class="sagawa-history-summary"></div>
+        <ul id="sagawaHistoryList" class="sagawa-history-list"></ul>
+        <div class="sagawa-history-actions">
+          <button id="sagawaMakeNewOnlyBtn" class="tao-action-button" type="button">只做新的</button>
+          <button id="sagawaMakeAllBtn" class="tao-action-button secondary" type="button">全部制作</button>
+          <button id="sagawaCancelHistoryBtn" class="tao-action-button secondary" type="button">取消</button>
+        </div>
+      </div>
     </div>
 
     <dialog id="taoLibraryDialog" class="tao-library-dialog">
@@ -3718,8 +3770,11 @@
   const TAO_REMOTE_MASTER_STORAGE_KEY = "isls_tao_remote_master_numbers_v1";
   const TAO_SYNC_URL_STORAGE_KEY = "isls_tao_sync_url_v1";
   const TAO_SYNC_KEY_STORAGE_KEY = "isls_tao_sync_key_v1";
+  const SAGAWA_HISTORY_STORAGE_KEY = "isls_sagawa_history_v1";
+  const SAGAWA_REMOTE_HISTORY_STORAGE_KEY = "isls_sagawa_remote_history_v1";
   let sagawaInputMode = "mixed";
   let sagawaDataFileStore = [];
+  let sagawaPendingGeneration = null;
 
   function log(message) {
     $("log").textContent += "\n" + message;
@@ -4547,6 +4602,264 @@
     return match ? match[0] : "";
   }
 
+  function normalizeSagawaHistoryRecord(record) {
+    if (!record) return null;
+    const source = Array.isArray(record)
+      ? { yne: record[0], sagawa: record[1], madeAt: record[2], outputName: record[3] }
+      : record;
+    const yne = normalizeYneNo(source.yne || source.yneNo || source.YNE || source.key || "");
+    const sagawa = normalizeSagawaNo(source.sagawa || source.sagawaNo || source.sagawaNumber || source.tracking || source.trackingNo || "");
+    if (!yne && !sagawa) return null;
+    return {
+      yne,
+      sagawa,
+      madeAt: toText(source.madeAt || source.time || source.createdAt || "").trim(),
+      outputName: toText(source.outputName || source.fileName || "").trim()
+    };
+  }
+
+  function isNewerSagawaHistory(a, b) {
+    if (!a) return false;
+    if (!b) return true;
+    const at = Date.parse(a.madeAt || "");
+    const bt = Date.parse(b.madeAt || "");
+    if (Number.isFinite(at) && Number.isFinite(bt)) return at > bt;
+    if (Number.isFinite(at) && !Number.isFinite(bt)) return true;
+    return !!a.madeAt && !b.madeAt;
+  }
+
+  function mergeSagawaHistoryRecords() {
+    const byKey = new Map();
+    Array.from(arguments).flat().forEach(record => {
+      const normalized = normalizeSagawaHistoryRecord(record);
+      if (!normalized) return;
+      const key = (normalized.yne || "-") + "|" + (normalized.sagawa || "-");
+      const prev = byKey.get(key);
+      if (!prev || isNewerSagawaHistory(normalized, prev)) byKey.set(key, normalized);
+    });
+    return Array.from(byKey.values());
+  }
+
+  function getStoredSagawaHistoryRecords() {
+    try {
+      const raw = localStorage.getItem(SAGAWA_HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? mergeSagawaHistoryRecords(parsed) : [];
+    } catch (err) {
+      console.warn("读取本机佐川历史库失败", err);
+      return [];
+    }
+  }
+
+  function saveStoredSagawaHistoryRecords(records) {
+    const normalized = mergeSagawaHistoryRecords(records || []);
+    localStorage.setItem(SAGAWA_HISTORY_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function getRemoteSagawaHistoryRecords() {
+    try {
+      const raw = localStorage.getItem(SAGAWA_REMOTE_HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? mergeSagawaHistoryRecords(parsed) : [];
+    } catch (err) {
+      console.warn("读取内部佐川历史库缓存失败", err);
+      return [];
+    }
+  }
+
+  function saveRemoteSagawaHistoryRecords(records) {
+    const normalized = mergeSagawaHistoryRecords(records || []);
+    localStorage.setItem(SAGAWA_REMOTE_HISTORY_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function getSagawaHistoryLibrary() {
+    return mergeSagawaHistoryRecords(getRemoteSagawaHistoryRecords(), getStoredSagawaHistoryRecords());
+  }
+
+  function buildSagawaHistoryEndpoint(url) {
+    const clean = toText(url).trim().replace(/\/+$/, "");
+    if (!clean) return "";
+    if (/\/sagawa-history$/i.test(clean)) return clean;
+    if (/\/tao-masters$/i.test(clean)) return clean.replace(/\/tao-masters$/i, "/sagawa-history");
+    return clean + "/sagawa-history";
+  }
+
+  function parseSagawaHistoryPayload(data) {
+    if (Array.isArray(data)) return data;
+    if (!data) return [];
+    return data.records || data.history || data.items || data.sagawaHistory || [];
+  }
+
+  async function requestSagawaSharedHistory(method, records) {
+    const config = saveTaoSyncConfigFromInput();
+    const endpoint = buildSagawaHistoryEndpoint(config.url);
+    if (!endpoint || !config.key) {
+      throw new Error("请先填写TAO共享库同步地址和内部同步密钥。");
+    }
+
+    const options = {
+      method,
+      headers: {
+        "Authorization": "Bearer " + config.key
+      }
+    };
+    if (method !== "GET") {
+      options.headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify({ records: mergeSagawaHistoryRecords(records || []) });
+    }
+
+    const res = await fetch(endpoint, options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (err) {
+      data = { error: "后端返回不是JSON。" };
+    }
+    if (!res.ok || !data || data.ok === false) {
+      throw new Error(data && data.error ? data.error : "佐川历史库同步失败。");
+    }
+    return data;
+  }
+
+  async function fetchSagawaSharedHistory() {
+    const data = await requestSagawaSharedHistory("GET");
+    return saveRemoteSagawaHistoryRecords(parseSagawaHistoryPayload(data));
+  }
+
+  async function loadSagawaHistoryForCheck() {
+    const config = saveTaoSyncConfigFromInput();
+    if (config.url && config.key) {
+      try {
+        await fetchSagawaSharedHistory();
+      } catch (err) {
+        log("\n读取内部佐川历史库失败，已临时使用本机历史库：" + err.message);
+      }
+    }
+    return getSagawaHistoryLibrary();
+  }
+
+  function buildSagawaHistoryIndexes(records) {
+    const byYne = new Map();
+    const bySagawa = new Map();
+    mergeSagawaHistoryRecords(records || []).forEach(record => {
+      if (record.yne && (!byYne.has(record.yne) || isNewerSagawaHistory(record, byYne.get(record.yne)))) {
+        byYne.set(record.yne, record);
+      }
+      if (record.sagawa && (!bySagawa.has(record.sagawa) || isNewerSagawaHistory(record, bySagawa.get(record.sagawa)))) {
+        bySagawa.set(record.sagawa, record);
+      }
+    });
+    return { byYne, bySagawa };
+  }
+
+  function makeSagawaItemKey(item) {
+    return (item.yne || "-") + "|" + (item.sagawa || "-");
+  }
+
+  function findSagawaHistoryMatches(items, records) {
+    const indexes = buildSagawaHistoryIndexes(records);
+    return (items || []).map(item => {
+      const yneHistory = item.yne ? indexes.byYne.get(item.yne) : null;
+      const sagawaHistory = item.sagawa ? indexes.bySagawa.get(item.sagawa) : null;
+      const history = isNewerSagawaHistory(sagawaHistory, yneHistory) ? sagawaHistory : yneHistory;
+      if (!history) return null;
+      const reasons = [];
+      if (yneHistory) reasons.push("YNE");
+      if (sagawaHistory) reasons.push("佐川号");
+      return Object.assign({}, item, { history, reason: reasons.join("+") });
+    }).filter(Boolean);
+  }
+
+  function uniqueSagawaHistoryMatches(matches) {
+    const byKey = new Map();
+    (matches || []).forEach(match => {
+      const key = makeSagawaItemKey(match);
+      const prev = byKey.get(key);
+      if (!prev || isNewerSagawaHistory(match.history, prev.history)) byKey.set(key, match);
+    });
+    return Array.from(byKey.values());
+  }
+
+  function formatSagawaHistoryTime(value) {
+    const raw = toText(value).trim();
+    if (!raw) return "时间不明";
+    const d = new Date(raw);
+    if (!Number.isFinite(d.getTime())) return raw;
+    const pad = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function hideSagawaHistoryNotice() {
+    const panel = $("sagawaHistoryNotice");
+    if (panel) panel.classList.remove("show");
+    const list = $("sagawaHistoryList");
+    if (list) list.innerHTML = "";
+    const summary = $("sagawaHistorySummary");
+    if (summary) summary.textContent = "";
+  }
+
+  function showSagawaHistoryNotice(matches, newItems) {
+    const panel = $("sagawaHistoryNotice");
+    const summary = $("sagawaHistorySummary");
+    const list = $("sagawaHistoryList");
+    const newBtn = $("sagawaMakeNewOnlyBtn");
+    if (!panel || !summary || !list) return;
+
+    const uniqueMatches = uniqueSagawaHistoryMatches(matches);
+    const newCount = (newItems || []).length;
+    summary.textContent = `发现 ${uniqueMatches.length} 个单号之前制作过；本次还有 ${newCount} 行新数据。请选择继续方式。`;
+    list.innerHTML = "";
+    uniqueMatches.slice(0, 80).forEach(match => {
+      const li = document.createElement("li");
+      const output = match.history.outputName ? `，文件：${match.history.outputName}` : "";
+      li.textContent = `${match.yne}-${match.sagawa}，上次：${formatSagawaHistoryTime(match.history.madeAt)}（${match.reason}重复${output}）`;
+      list.appendChild(li);
+    });
+    if (uniqueMatches.length > 80) {
+      const li = document.createElement("li");
+      li.textContent = `...还有 ${uniqueMatches.length - 80} 个重复单号`;
+      list.appendChild(li);
+    }
+    if (newBtn) {
+      newBtn.textContent = `只做新的（${newCount}行）`;
+      newBtn.disabled = newCount === 0;
+    }
+    panel.classList.add("show");
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  async function saveSagawaHistoryForItems(items, outputName) {
+    const madeAt = new Date().toISOString();
+    const additions = mergeSagawaHistoryRecords((items || []).map(item => ({
+      yne: item.yne,
+      sagawa: item.sagawa,
+      madeAt,
+      outputName
+    })));
+    if (!additions.length) return { additions: 0, localCount: getStoredSagawaHistoryRecords().length, synced: false };
+
+    const local = saveStoredSagawaHistoryRecords(getStoredSagawaHistoryRecords().concat(additions));
+    const config = saveTaoSyncConfigFromInput();
+    if (!config.url || !config.key) {
+      return { additions: additions.length, localCount: local.length, synced: false };
+    }
+
+    try {
+      const data = await requestSagawaSharedHistory("POST", additions);
+      const payloadRecords = parseSagawaHistoryPayload(data);
+      const remote = payloadRecords.length
+        ? saveRemoteSagawaHistoryRecords(payloadRecords)
+        : saveRemoteSagawaHistoryRecords(mergeSagawaHistoryRecords(getRemoteSagawaHistoryRecords(), additions));
+      return { additions: additions.length, localCount: local.length, remoteCount: remote.length, synced: true };
+    } catch (err) {
+      return { additions: additions.length, localCount: local.length, synced: false, error: err.message };
+    }
+  }
+
   function addSagawaPair(map, warnings, source, yneRaw, sagawaRaw) {
     const yne = normalizeYneNo(yneRaw);
     const sagawa = normalizeSagawaNo(sagawaRaw);
@@ -4624,6 +4937,8 @@
 
   function addSagawaDataFiles(files) {
     Array.from(files || []).forEach(file => sagawaDataFileStore.push(file));
+    sagawaPendingGeneration = null;
+    hideSagawaHistoryNotice();
     updateSagawaDataFileList();
   }
 
@@ -4645,30 +4960,34 @@
     const result = [];
     const dataYneSet = new Set();
     const generatedYnes = [];
+    const generatedItems = [];
 
     for (const item of cargoRows) {
       const r = item.row || [];
       const key = normalizeYneNo(r[4]);
       if (key) dataYneSet.add(key);
       if (!key || !sagawaMap[key]) continue;
+      const sagawa = toText(sagawaMap[key]).trim();
 
-      result.push([
+      const csvRow = [
         todayFullForSagawa(),
         "14687210",
         "017",
         "5",
-        toText(sagawaMap[key]).trim(),
+        sagawa,
         toText(r[32]).trim(),
         toText(r[33]).trim(),
-        toText(sagawaMap[key]).trim(),
+        sagawa,
         safeSagawaCell(r[5]),
         toText(r[34]).trim(),
         (parseFloat(toText(r[6]).replace(/,/g, "")) || 0).toFixed(1)
-      ]);
+      ];
+      result.push(csvRow);
       generatedYnes.push(key);
+      generatedItems.push({ yne: key, sagawa, row: csvRow });
     }
 
-    return { result, dataYneSet, generatedYnes };
+    return { result, dataYneSet, generatedYnes, generatedItems };
   }
 
   function todayFullForSagawa() {
@@ -4696,9 +5015,76 @@
     return rows.map(row => row.map(safeSagawaCell).join(",")).join("\r\n") + "\r\n";
   }
 
+  function logSagawaGenerationSummary(context, items, historySave, choiceLabel) {
+    log("\n生成完成。");
+    log("选择方式: " + choiceLabel);
+    log("货物表数量: " + context.fileCount);
+    log("输入对照: " + context.mapKeys.length + "条");
+    log("解析到有效对照: " + context.count + "条");
+    log("生成佐川数据: " + items.length + "条");
+    log("输入对照但货物表E列未找到: " + context.notFound.length + "条");
+
+    if (context.duplicateMatches.length) {
+      const skippedRows = context.generatedItems.length - items.length;
+      log("历史库已制作过: " + uniqueSagawaHistoryMatches(context.duplicateMatches).length + "个单号");
+      if (skippedRows > 0) log("本次跳过已制作数据: " + skippedRows + "条");
+    }
+
+    if (context.notFound.length) {
+      log("\n未在货物表E列查到以下单号:");
+      context.notFound.forEach(key => log(`${key}-${context.map[key]}`));
+    }
+
+    if (context.dataWithoutSagawa.length) {
+      log("\n货物表里有YNE，但没有输入佐川对照（仅提示，不影响已匹配生成）:");
+      context.dataWithoutSagawa.slice(0, 80).forEach(key => log(key));
+      if (context.dataWithoutSagawa.length > 80) log(`...还有 ${context.dataWithoutSagawa.length - 80} 条`);
+    }
+
+    if (context.warnings.length) {
+      log("\n提示:");
+      context.warnings.forEach(text => log(text));
+    }
+
+    if (historySave.additions) {
+      log("\n佐川历史库已记录: " + historySave.additions + "个单号");
+      if (historySave.synced) {
+        log("内部佐川历史库同步完成，共享库现有: " + historySave.remoteCount + "个");
+      } else if (historySave.error) {
+        log("内部佐川历史库同步失败，已保存在本机历史库: " + historySave.error);
+      } else {
+        log("未设置内部共享库，本次记录保存在本机浏览器。");
+      }
+    }
+
+    log("\n已生成下载文件: " + context.outputName);
+  }
+
+  async function finishSagawaGeneration(context, mode) {
+    const items = mode === "new" ? context.newItems : context.generatedItems;
+    const choiceLabel = mode === "new" ? "只做新的" : (context.duplicateMatches.length ? "全部制作" : "正常生成");
+    if (!items.length) {
+      log("\n没有新的佐川数据需要生成。");
+      return;
+    }
+
+    downloadSjisCsv(rowsToSagawaCsv(items.map(item => item.row)), context.outputName);
+    const historySave = await saveSagawaHistoryForItems(items, context.outputName);
+    hideSagawaHistoryNotice();
+    sagawaPendingGeneration = null;
+    logSagawaGenerationSummary(context, items, historySave, choiceLabel);
+  }
+
+  async function finishPendingSagawaGeneration(mode) {
+    if (!sagawaPendingGeneration) return;
+    await finishSagawaGeneration(sagawaPendingGeneration, mode);
+  }
+
   async function processSagawaData() {
     try {
       resetLog("佐川数据生成中...");
+      hideSagawaHistoryNotice();
+      sagawaPendingGeneration = null;
 
       if (!sagawaDataFileStore.length) {
         alert("请先拖入货物信息表。");
@@ -4718,37 +5104,43 @@
       const { all, stats } = await readAllSagawaCargoRows(sagawaDataFileStore);
       log("货物表: " + stats.join(" / "));
 
-      const { result, dataYneSet } = buildSagawaCsvRows(all, map);
+      const { dataYneSet, generatedItems } = buildSagawaCsvRows(all, map);
       const notFound = mapKeys.filter(key => !dataYneSet.has(key));
       const dataWithoutSagawa = Array.from(dataYneSet).filter(key => !map[key]);
 
       const outputName = `YNE${todayShortForSagawa()}.csv`;
-      downloadSjisCsv(rowsToSagawaCsv(result), outputName);
+      const history = await loadSagawaHistoryForCheck();
+      const duplicateMatches = findSagawaHistoryMatches(generatedItems, history);
+      const duplicateKeys = new Set(duplicateMatches.map(makeSagawaItemKey));
+      const newItems = generatedItems.filter(item => !duplicateKeys.has(makeSagawaItemKey(item)));
+      const context = {
+        map,
+        mapKeys,
+        count,
+        fileCount: sagawaDataFileStore.length,
+        notFound,
+        dataWithoutSagawa,
+        warnings,
+        outputName,
+        generatedItems,
+        duplicateMatches,
+        newItems
+      };
 
-      log("\n生成完成。");
-      log("货物表数量: " + sagawaDataFileStore.length);
-      log("输入对照: " + mapKeys.length + "条");
-      log("解析到有效对照: " + count + "条");
-      log("生成佐川数据: " + result.length + "条");
-      log("输入对照但货物表E列未找到: " + notFound.length + "条");
-
-      if (notFound.length) {
-        log("\n未在货物表E列查到以下单号:");
-        notFound.forEach(key => log(`${key}-${map[key]}`));
+      if (duplicateMatches.length) {
+        sagawaPendingGeneration = context;
+        showSagawaHistoryNotice(duplicateMatches, newItems);
+        log("\n检测到以下单号之前制作过，请在页面提示中选择“只做新的”或“全部制作”:");
+        uniqueSagawaHistoryMatches(duplicateMatches).slice(0, 80).forEach(match => {
+          log(`${match.yne}-${match.sagawa} 上次：${formatSagawaHistoryTime(match.history.madeAt)}`);
+        });
+        if (uniqueSagawaHistoryMatches(duplicateMatches).length > 80) {
+          log(`...还有 ${uniqueSagawaHistoryMatches(duplicateMatches).length - 80} 个重复单号`);
+        }
+        return;
       }
 
-      if (dataWithoutSagawa.length) {
-        log("\n货物表里有YNE，但没有输入佐川对照（仅提示，不影响已匹配生成）:");
-        dataWithoutSagawa.slice(0, 80).forEach(key => log(key));
-        if (dataWithoutSagawa.length > 80) log(`...还有 ${dataWithoutSagawa.length - 80} 条`);
-      }
-
-      if (warnings.length) {
-        log("\n提示:");
-        warnings.forEach(text => log(text));
-      }
-
-      log("\n已生成下载文件: " + outputName);
+      await finishSagawaGeneration(context, "all");
     } catch (err) {
       console.error(err);
       resetLog("佐川数据生成出错：\n" + err.message);
@@ -5322,6 +5714,8 @@
     e.preventDefault();
     sagawaDataFileStore = [];
     $("sagawaDataFiles").value = "";
+    sagawaPendingGeneration = null;
+    hideSagawaHistoryNotice();
     updateSagawaDataFileList();
   });
   ["dragenter", "dragover"].forEach(name => {
@@ -5340,14 +5734,28 @@
   });
   $("sagawaDataDropZone").addEventListener("drop", (e) => {
     addSagawaDataFiles(e.dataTransfer && e.dataTransfer.files);
+    sagawaPendingGeneration = null;
+    hideSagawaHistoryNotice();
   });
   function setSagawaInputMode(mode) {
     sagawaInputMode = mode;
+    sagawaPendingGeneration = null;
+    hideSagawaHistoryNotice();
     $("sagawaMixedPanel").classList.toggle("show", sagawaInputMode === "mixed");
     $("sagawaSplitPanel").classList.toggle("show", sagawaInputMode === "split");
   }
   $("sagawaToggleModeBtn").addEventListener("click", () => setSagawaInputMode("split"));
   $("sagawaToggleModeBtnSplit").addEventListener("click", () => setSagawaInputMode("mixed"));
+  $("sagawaMapData").addEventListener("input", hideSagawaHistoryNotice);
+  $("sagawaYneList").addEventListener("input", hideSagawaHistoryNotice);
+  $("sagawaSagawaList").addEventListener("input", hideSagawaHistoryNotice);
+  $("sagawaMakeNewOnlyBtn").addEventListener("click", () => finishPendingSagawaGeneration("new"));
+  $("sagawaMakeAllBtn").addEventListener("click", () => finishPendingSagawaGeneration("all"));
+  $("sagawaCancelHistoryBtn").addEventListener("click", () => {
+    sagawaPendingGeneration = null;
+    hideSagawaHistoryNotice();
+    log("\n已取消本次佐川数据制作。");
+  });
   $("taoLibraryOpenBtn").addEventListener("click", openTaoLibraryDialog);
   $("taoLibraryCloseBtn").addEventListener("click", closeTaoLibraryDialog);
   $("taoLibrarySaveBtn").addEventListener("click", saveTaoLibraryFromInput);
