@@ -700,5 +700,23 @@
     "sagawa": "364041977084",
     "madeAt": "2026-07-08T08:35:09.400Z",
     "outputName": "YNE0708.csv"
+  },
+  {
+    "yne": "YNE6021879",
+    "sagawa": "364041957720",
+    "madeAt": "2026-07-10T08:36:35.799Z",
+    "outputName": "YNE0710.csv"
+  },
+  {
+    "yne": "YNE6022718",
+    "sagawa": "364041957871",
+    "madeAt": "2026-07-10T08:36:35.799Z",
+    "outputName": "YNE0710.csv"
+  },
+  {
+    "yne": "YNE6023321",
+    "sagawa": "364041957786",
+    "madeAt": "2026-07-10T08:36:35.799Z",
+    "outputName": "YNE0710.csv"
   }
 ]
