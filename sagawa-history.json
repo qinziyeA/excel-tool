@@ -1252,5 +1252,29 @@
     "sagawa": "364041976491",
     "madeAt": "2026-07-24T02:23:25.619Z",
     "outputName": "YNE0724.csv"
+  },
+  {
+    "yne": "YNE20260721303",
+    "sagawa": "364041955830",
+    "madeAt": "2026-07-25T08:45:51.974Z",
+    "outputName": "YNE0725.csv"
+  },
+  {
+    "yne": "YNE202607203001",
+    "sagawa": "364041955841",
+    "madeAt": "2026-07-25T08:45:51.974Z",
+    "outputName": "YNE0725.csv"
+  },
+  {
+    "yne": "YNE6100107517",
+    "sagawa": "364041959212",
+    "madeAt": "2026-07-25T08:45:51.974Z",
+    "outputName": "YNE0725.csv"
+  },
+  {
+    "yne": "YNE6100128752",
+    "sagawa": "364041959223",
+    "madeAt": "2026-07-25T08:45:51.974Z",
+    "outputName": "YNE0725.csv"
   }
 ]
