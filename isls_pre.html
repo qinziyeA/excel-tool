@@ -620,7 +620,7 @@ const TOKYO_AREA_WORDS = [
   "TOKYO", "KANAGAWA", "CHIBA", "SAITAMA", "IBARAKI", "TOCHIGI", "GUNMA", "GUMMA", "YAMANASHI"
 ];
 
-const NAME_MAX_SJIS_BYTES = 27;
+const NAME_MAX_CHARS = 15;
 const ADDRESS_MAX_SJIS_BYTES = 95;
 
 let overviewCache = null;
@@ -955,6 +955,7 @@ function buildOverviewRecords(rows) {
     status: findCol(headers, ["状態"], 2),
     hawb: findCol(headers, ["HAWB番号"], 3),
     mawb: findCol(headers, ["MAWB番号"], 4),
+    business: findCol(headers, ["業務番号"], 5),
     address: findCol(headers, ["收件人地址"], 11),
     name: findCol(headers, ["輸入者名"], 12),
     phone: findCol(headers, ["輸入者電話番号"], 13),
@@ -980,6 +981,7 @@ function buildOverviewRecords(rows) {
       status: getCell(row, cols.status),
       hawb: normalizeMasterNumber(getCell(row, cols.hawb)),
       mawb: normalizeMasterNumber(getCell(row, cols.mawb)),
+      business: normalizeMasterNumber(getCell(row, cols.business)),
       address: getCell(row, cols.address),
       name: getCell(row, cols.name),
       phone: phoneFixed.value,
@@ -1106,8 +1108,8 @@ function buildTargetRow(record, sizeCode, requestSetting, sortCode) {
   row[4] = record.zip;
   row[5] = record.address;
   row[11] = "0";
-  row[12] = record.amount;
-  row[13] = record.amount;
+  row[12] = "AA";
+  row[13] = "AA";
   row[17] = requestSetting.r;
   row[18] = requestSetting.s;
   row[20] = sortCode || "";
@@ -1212,6 +1214,23 @@ function fixSjisLength(value, maxBytes) {
   };
 }
 
+function fixCharacterLength(value, maxChars) {
+  const original = toText(value);
+  const chars = Array.from(original);
+  const beforeChars = chars.length;
+  if (beforeChars <= maxChars) {
+    return { value: original, changed: false, beforeChars, afterChars: beforeChars, truncated: false };
+  }
+  const fixed = chars.slice(0, maxChars).join("");
+  return {
+    value: fixed,
+    changed: fixed !== original,
+    beforeChars,
+    afterChars: Array.from(fixed).length,
+    truncated: true
+  };
+}
+
 function fixAddressLength(value, maxBytes) {
   const original = toText(value);
   const beforeBytes = sjisByteLength(original);
@@ -1253,11 +1272,11 @@ function cleanGeneratedRow(rawRow, record, stats, details) {
   const row = rawRow.map(value => cleanOutputCell(removeNullText(value)));
 
   const nameOriginal = row[3];
-  const nameFixed = fixSjisLength(nameOriginal, NAME_MAX_SJIS_BYTES);
+  const nameFixed = fixCharacterLength(nameOriginal, NAME_MAX_CHARS);
   if (nameFixed.changed) {
     row[3] = nameFixed.value;
     stats.nameTruncated++;
-    details.push(`第${record.rowNo}行 单号${record.hawb || "空"}：D列收件人名 ${nameFixed.beforeBytes}byte -> ${nameFixed.afterBytes}byte，已截断为「${nameFixed.value}」`);
+    details.push(`第${record.rowNo}行 单号${record.hawb || "空"}：D列收件人名 ${nameFixed.beforeChars}字符 -> ${nameFixed.afterChars}字符，已截断为「${nameFixed.value}」`);
   }
 
   const addressOriginal = row[5];
