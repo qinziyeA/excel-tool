@@ -209,6 +209,11 @@
     line-height: 1;
   }
 
+  .icon-button .icon {
+    display: inline-block;
+    transform: rotate(90deg);
+  }
+
   .icon-button:hover {
     background: var(--soft-gray);
   }
@@ -388,7 +393,7 @@
     <div class="card">
       <div class="spread">
         <h2>② TAO 主单库</h2>
-        <button id="refreshTaoBtn" class="icon-button" type="button" title="刷新统计" aria-label="刷新统计">↻</button>
+        <button id="refreshTaoBtn" class="icon-button" type="button" title="刷新统计" aria-label="刷新统计"><span class="icon">⟳</span></button>
       </div>
       <div class="countbar">
         <div class="mini"><span>内置</span><strong id="taoBuiltinCount">0</strong></div>
