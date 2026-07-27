@@ -194,6 +194,25 @@
     cursor: not-allowed;
   }
 
+  .icon-button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fff;
+    color: #253246;
+    border: 1px solid #cdd7e5;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .icon-button:hover {
+    background: var(--soft-gray);
+  }
+
   .tabs {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -369,7 +388,7 @@
     <div class="card">
       <div class="spread">
         <h2>② TAO 主单库</h2>
-        <button id="refreshTaoBtn" class="secondary" type="button">刷新统计</button>
+        <button id="refreshTaoBtn" class="icon-button" type="button" title="刷新统计" aria-label="刷新统计">↻</button>
       </div>
       <div class="countbar">
         <div class="mini"><span>内置</span><strong id="taoBuiltinCount">0</strong></div>
