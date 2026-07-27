@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>黑猫预定数据制作</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
+<style>
+  :root {
+    --bg: #eef2f6;
+    --panel: rgba(255,255,255,.92);
+    --panel-strong: #fff;
+    --line: #d8e0ea;
+    --text: #1d2633;
+    --muted: #6f7c8e;
+    --blue: #2f6fed;
+    --blue-dark: #1c55c9;
+    --green: #14966d;
+    --amber: #b87512;
+    --soft-blue: #eaf1ff;
+    --soft-gray: #f4f7fb;
+    --danger: #c93d3d;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      linear-gradient(135deg, rgba(18,31,48,.06), transparent 35%),
+      linear-gradient(225deg, rgba(47,111,237,.06), transparent 38%),
+      var(--bg);
+    color: var(--text);
+    font-family: Arial, "Microsoft YaHei", "Yu Gothic", sans-serif;
+  }
+
+  .shell {
+    width: min(1240px, calc(100% - 32px));
+    margin: 24px auto 40px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: 0;
+  }
+
+  .subtitle {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .badge {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 28px rgba(29,38,51,.07);
+    padding: 16px;
+  }
+
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 17px;
+  }
+
+  .card h3 {
+    margin: 14px 0 8px;
+    font-size: 14px;
+  }
+
+  .field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  label {
+    color: #334052;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  input[type="file"],
+  input[type="text"],
+  input[type="password"],
+  select,
+  textarea {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #cdd7e5;
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+
+  textarea {
+    min-height: 112px;
+    resize: vertical;
+    line-height: 1.45;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(47,111,237,.14);
+  }
+
+  .hint {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .spread {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  button {
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 9px 13px;
+    background: var(--blue);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  button:hover { background: var(--blue-dark); }
+
+  button.secondary {
+    background: #fff;
+    color: #253246;
+    border-color: #cdd7e5;
+  }
+
+  button.secondary:hover {
+    background: var(--soft-gray);
+  }
+
+  button.green {
+    background: var(--green);
+  }
+
+  button.green:hover {
+    background: #0e7d5a;
+  }
+
+  button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+
+  .tab {
+    background: #fff;
+    color: #253246;
+    border: 1px solid var(--line);
+    padding: 14px;
+    text-align: left;
+  }
+
+  .tab:hover {
+    background: var(--soft-gray);
+  }
+
+  .tab.active {
+    background: var(--soft-blue);
+    border-color: #9bb8ff;
+    color: #163f95;
+  }
+
+  .tab .title {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .tab .sub {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 12px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .option-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .checkline {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.7);
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 58px;
+  }
+
+  .checkline input {
+    margin-top: 2px;
+  }
+
+  .checkline span {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .checkline small {
+    display: block;
+    color: var(--muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  .status {
+    min-height: 36px;
+    border: 1px dashed #bcc8d8;
+    background: rgba(255,255,255,.55);
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .status strong { color: var(--text); }
+
+  .countbar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .mini {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 9px;
+    min-height: 52px;
+  }
+
+  .mini span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .mini strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 17px;
+  }
+
+  .log {
+    background: #111827;
+    color: #d9f7e8;
+    border-radius: var(--radius);
+    padding: 14px;
+    min-height: 220px;
+    max-height: 420px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-family: Consolas, "Microsoft YaHei UI", monospace;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .warn { color: var(--amber); }
+  .danger { color: var(--danger); }
+
+  @media (max-width: 900px) {
+    .grid,
+    .option-grid,
+    .countbar {
+      grid-template-columns: 1fr;
+    }
+
+    .topbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="topbar">
+    <div>
+      <h1>黑猫预定数据制作</h1>
+      <p class="subtitle">独立版页面：读取 HAWB 货物信息一览，按宅急便 / 投函生成黑猫预定 CSV，不改原来的 ISLS 和佐川页面。</p>
+    </div>
+    <div class="badge">导出编码：Shift_JIS / SJIS</div>
+  </div>
+
+  <section class="grid">
+    <div class="card">
+      <h2>① 上传货物信息一览</h2>
+      <div class="field">
+        <label for="overviewFile">HAWB_Overview xlsx</label>
+        <input type="file" id="overviewFile" accept=".xlsx,.xls,.csv">
+      </div>
+      <div class="field">
+        <label for="sortCodeFile">黑猫分拣码对照表</label>
+        <input type="file" id="sortCodeFile" accept=".xlsx,.xls,.csv">
+        <div class="hint">A列=邮编，B列=分拣码。表格每月更换，制作数据前请上传当月版本。</div>
+      </div>
+      <div id="overviewStatus" class="status">等待上传一览表。</div>
+      <div id="sortCodeStatus" class="status" style="margin-top:10px;">等待上传黑猫分拣码对照表。</div>
+    </div>
+
+    <div class="card">
+      <div class="spread">
+        <h2>② TAO 主单库</h2>
+        <button id="refreshTaoBtn" class="secondary" type="button">刷新统计</button>
+      </div>
+      <div class="countbar">
+        <div class="mini"><span>内置</span><strong id="taoBuiltinCount">0</strong></div>
+        <div class="mini"><span>共享</span><strong id="taoRemoteCount">0</strong></div>
+        <div class="mini"><span>本机新增</span><strong id="taoLocalCount">0</strong></div>
+        <div class="mini"><span>合计去重</span><strong id="taoTotalCount">0</strong></div>
+      </div>
+      <div class="field">
+        <label for="taoSyncUrl">共享库地址</label>
+        <input type="text" id="taoSyncUrl" placeholder="https://...workers.dev">
+      </div>
+      <div class="field">
+        <label for="taoSyncKey">内部同步密钥</label>
+        <input type="password" id="taoSyncKey" placeholder="只保存在当前浏览器 localStorage">
+      </div>
+      <div class="field">
+        <label for="taoLocalInput">添加 TAO 主单号</label>
+        <textarea id="taoLocalInput" placeholder="一行一个，或用空格 / 逗号 / 顿号分隔；重复添加只保留一个"></textarea>
+      </div>
+      <div class="row">
+        <button id="taoSaveLocalBtn" class="secondary" type="button">保存新增</button>
+        <button id="taoClearLocalBtn" class="secondary" type="button">清空新增</button>
+        <button id="taoFetchBtn" class="secondary" type="button">读取共享库</button>
+        <button id="taoSyncBtn" class="secondary" type="button">同步本机新增</button>
+      </div>
+      <div id="taoSyncStatus" class="hint" style="margin-top:8px;"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px;">
+    <h2>③ 制作窗口</h2>
+    <div class="tabs">
+      <button id="tabNormalTokyo" class="tab active" type="button">
+        <span class="title">普通东京宅配</span>
+        <span class="sub">全部按普通东京请求码，尾号 99</span>
+      </button>
+      <button id="tabCainiaoTokyo" class="tab" type="button">
+        <span class="title">菜鸟东京宅配</span>
+        <span class="sub">跳过 CAINIAO，按 TAO 宅配检查</span>
+      </button>
+      <button id="tabNormalOsaka" class="tab" type="button">
+        <span class="title">普通大阪宅配</span>
+        <span class="sub">按 A列代理店使用大阪请求码逻辑</span>
+      </button>
+      <button id="tabTokyoPosting" class="tab" type="button">
+        <span class="title">东京投函</span>
+        <span class="sub">按 TAO 命中自动拆普通东京投函 / TAO投函</span>
+      </button>
+    </div>
+
+    <div id="panelNormalTokyo" class="panel active">
+      <div class="option-grid">
+        <div class="checkline">
+          <span>固定请求码<small>運賃請求先コード 使用普通东京 072463680199。</small></span>
+        </div>
+        <div class="checkline">
+          <span>整表生成<small>不按关键词排除，上传进来的所有数据都按普通东京宅配制作。</small></span>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="runNormalTokyoBtn" class="green" type="button">生成普通东京宅配 CSV</button>
+      </div>
+    </div>
+
+    <div id="panelCainiaoTokyo" class="panel">
+      <div class="option-grid">
+        <div class="checkline">
+          <span>必须命中 TAO 主单库<small>用一览表的 MAWB番号 核对 TAO 库；它会写入生成CSV的発送管理番号。</small></span>
+        </div>
+        <div class="checkline">
+          <span>跳过 CAINIAO<small>A列代理店为 CAINIAO 的行不生成，并会在结果里提示。</small></span>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="runCainiaoTokyoBtn" class="green" type="button">生成菜鸟东京宅配 CSV</button>
+      </div>
+    </div>
+
+    <div id="panelNormalOsaka" class="panel">
+      <div class="option-grid">
+        <div class="checkline">
+          <span>按代理店选择请求码<small>A列为 YNE / NY / MMA / RG 时使用菜鸟大阪请求码，其余代理店按普通大阪代理店设置。</small></span>
+        </div>
+        <div class="checkline">
+          <span>整表生成<small>不按关键词排除，上传进来的所有数据都按大阪宅配逻辑制作。</small></span>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="runNormalOsakaBtn" class="green" type="button">生成普通大阪宅配 CSV</button>
+      </div>
+    </div>
+
+    <div id="panelTokyoPosting" class="panel">
+      <div class="option-grid">
+        <div class="checkline">
+          <span>自动按 TAO 主单库拆分<small>用一览表的 MAWB番号 核对 TAO 库；命中生成 TAO投函，未命中生成普通东京投函。</small></span>
+        </div>
+        <div class="checkline">
+          <span>整表生成<small>不按关键词筛选，上传进来的所有数据都按东京投函逻辑制作并自动拆文件。</small></span>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="runTokyoPostingBtn" class="green" type="button">生成东京投函 CSV</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px;">
+    <h2>处理结果</h2>
+    <pre id="log" class="log">等待操作...</pre>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const SHIP_SETTINGS = {
+  cainiao_osaka: { label: "菜鸟大阪", r: "036429996021", s: "" },
+  normal_tokyo: { label: "普通东京", r: "072463680199", s: "" },
+  cainiao_tokyo: { label: "菜鸟东京", r: "036429996010", s: "" }
+};
+
+const AGENT_SETTINGS = {
+  YNE: { label: "YNE", r: "0724636801", s: "019" },
+  MMA: { label: "MMA", r: "0724636801", s: "" },
+  NY:  { label: "NY",  r: "0724636801", s: "045" },
+  LDX: { label: "LDX", r: "0724636801", s: "02" },
+  RG:  { label: "RG",  r: "0724636801", s: "006" },
+  CJ:  { label: "CJ",  r: "0724636801", s: "015" },
+  CNE: { label: "CNE", r: "0724636801", s: "044" }
+};
+
+const CONFIRMED_OSAKA_TO_CAINIAO_AGENTS = ["YNE", "MMA", "RG", "NY"];
+const BUILTIN_TAO_MASTER_NUMBERS = [
+  "20533737826",
+  "16012400135",
+  "11206735153",
+  "16012400673",
+  "11206735304",
+  "11206736903",
+  "11206735805",
+  "11206737043",
+  "11206737183",
+  "11206017830",
+  "11206872880",
+  "20585494205",
+  "20585513234",
+  "11206874066",
+  "16012400695",
+  "11206874792",
+  "16013562161"
+];
+
+const TAO_MASTER_STORAGE_KEY = "isls_tao_master_numbers_v1";
+const TAO_REMOTE_MASTER_STORAGE_KEY = "isls_tao_remote_master_numbers_v1";
+const TAO_SYNC_URL_STORAGE_KEY = "isls_tao_sync_url_v1";
+const TAO_SYNC_KEY_STORAGE_KEY = "isls_tao_sync_key_v1";
+
+const TARGET_HEADERS = [
+  "??出荷番号",
+  "運送送り状番号",
+  "荷届先電話番号",
+  "荷届先名（漢字）",
+  "荷届先郵便番号",
+  "荷届先住所（漢字）",
+  " ",
+  " ",
+  " ",
+  "荷届先部門名１（漢字）",
+  "荷届先部門名２（漢字）",
+  "荷送人電話番号",
+  "荷送人名（漢字）",
+  "荷送人住所（漢字）",
+  " ",
+  " ",
+  " ",
+  "運賃請求先コード",
+  "運賃請求先コード枝番",
+  "予備",
+  "仕分けコード",
+  "運送品標記用品コード",
+  "商品名１（漢字）",
+  "寸法単位コード",
+  "荷物取扱条件（漢字）",
+  "品代金",
+  "温度区分",
+  "荷受人コード",
+  "集荷希望日",
+  "配達指定日",
+  "着荷指定時刻条件",
+  "出荷区分",
+  "予備",
+  "発送管理番号",
+  "検索キータイトル１",
+  "検索キー１",
+  "検索キータイトル２",
+  "検索キー２",
+  "検索キータイトル３",
+  "検索キー３",
+  "検索キータイトル４",
+  "検索キー４",
+  "検索キータイトル５",
+  "検索キー５",
+  "止置着店店所コード",
+  "予備"
+];
+
+const OSAKA_AREA_WORDS = [
+  "大阪府", "京都府", "兵庫県", "奈良県", "和歌山県", "滋賀県",
+  "OSAKA", "KYOTO", "HYOGO", "NARA", "WAKAYAMA", "SHIGA"
+];
+
+const TOKYO_AREA_WORDS = [
+  "東京都", "神奈川県", "千葉県", "埼玉県", "茨城県", "栃木県", "群馬県", "山梨県",
+  "TOKYO", "KANAGAWA", "CHIBA", "SAITAMA", "IBARAKI", "TOCHIGI", "GUNMA", "GUMMA", "YAMANASHI"
+];
+
+const NAME_MAX_SJIS_BYTES = 27;
+const ADDRESS_MAX_SJIS_BYTES = 95;
+
+let overviewCache = null;
+let sortCodeCache = null;
+
+function toText(value) {
+  return value == null ? "" : String(value);
+}
+
+function log(message) {
+  $("log").textContent += "\n" + message;
+}
+
+function resetLog(message) {
+  $("log").textContent = message || "";
+}
+
+function toHalfWidthDigits(value) {
+  return toText(value).replace(/[０-９]/g, (ch) => {
+    return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+  });
+}
+
+function toHalfWidthAscii(value) {
+  return toText(value)
+    .replace(/\u3000/g, " ")
+    .replace(/[！-～]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+}
+
+function normalizeSpaces(value) {
+  return toText(value)
+    .replace(/\u3000/g, " ")
+    .replace(/[\t\r\n]+/g, " ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
+function normalizeMasterNumber(value) {
+  let s = toHalfWidthAscii(value)
+    .replace(/[\t\r\n ]+/g, "")
+    .trim();
+  if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+  return s;
+}
+
+function uniqueNormalizedList(values) {
+  const seen = new Set();
+  const out = [];
+  values.forEach(value => {
+    const normalized = normalizeMasterNumber(value);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  });
+  return out;
+}
+
+function parseMasterNumbers(text) {
+  return uniqueNormalizedList(toHalfWidthAscii(text).split(/[\s,，、;；]+/));
+}
+
+function getStoredTaoMasterNumbers() {
+  try {
+    const raw = localStorage.getItem(TAO_MASTER_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return uniqueNormalizedList(parsed);
+    return parseMasterNumbers(raw);
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveStoredTaoMasterNumbers(list) {
+  const normalized = uniqueNormalizedList(list);
+  localStorage.setItem(TAO_MASTER_STORAGE_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+function getRemoteTaoMasterNumbers() {
+  try {
+    const raw = localStorage.getItem(TAO_REMOTE_MASTER_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return uniqueNormalizedList(parsed);
+    return parseMasterNumbers(raw);
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveRemoteTaoMasterNumbers(list) {
+  const normalized = uniqueNormalizedList(list);
+  localStorage.setItem(TAO_REMOTE_MASTER_STORAGE_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+function getBuiltinTaoMasterNumbers() {
+  return uniqueNormalizedList(BUILTIN_TAO_MASTER_NUMBERS);
+}
+
+function getTaoMasterLibrary() {
+  return uniqueNormalizedList(
+    getBuiltinTaoMasterNumbers()
+      .concat(getRemoteTaoMasterNumbers())
+      .concat(getStoredTaoMasterNumbers())
+  );
+}
+
+function refreshTaoLibraryUI() {
+  const builtin = getBuiltinTaoMasterNumbers();
+  const remote = getRemoteTaoMasterNumbers();
+  const stored = getStoredTaoMasterNumbers();
+  const all = getTaoMasterLibrary();
+  $("taoBuiltinCount").textContent = builtin.length;
+  $("taoRemoteCount").textContent = remote.length;
+  $("taoLocalCount").textContent = stored.length;
+  $("taoTotalCount").textContent = all.length;
+  if (document.activeElement !== $("taoLocalInput")) $("taoLocalInput").value = stored.join("\n");
+  if (document.activeElement !== $("taoSyncUrl")) $("taoSyncUrl").value = localStorage.getItem(TAO_SYNC_URL_STORAGE_KEY) || "";
+  if (document.activeElement !== $("taoSyncKey")) $("taoSyncKey").value = localStorage.getItem(TAO_SYNC_KEY_STORAGE_KEY) || "";
+}
+
+function buildTaoSyncEndpoint(url) {
+  const clean = toText(url).trim().replace(/\/+$/, "");
+  if (!clean) return "";
+  return /\/tao-masters$/i.test(clean) ? clean : clean + "/tao-masters";
+}
+
+function saveTaoSyncConfigFromInput() {
+  const url = $("taoSyncUrl").value.trim();
+  const key = $("taoSyncKey").value;
+  localStorage.setItem(TAO_SYNC_URL_STORAGE_KEY, url);
+  localStorage.setItem(TAO_SYNC_KEY_STORAGE_KEY, key);
+  return { url, key };
+}
+
+function setTaoSyncStatus(message) {
+  $("taoSyncStatus").textContent = message || "";
+}
+
+async function requestTaoSharedLibrary(method, masters) {
+  const config = saveTaoSyncConfigFromInput();
+  const endpoint = buildTaoSyncEndpoint(config.url);
+  if (!endpoint || !config.key) throw new Error("请先填写共享库地址和内部同步密钥。");
+
+  const options = {
+    method,
+    headers: { "Authorization": "Bearer " + config.key }
+  };
+  if (method !== "GET") {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify({ masters: uniqueNormalizedList(masters || []) });
+  }
+
+  const res = await fetch(endpoint, options);
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (err) {
+    data = { error: "后端返回不是JSON。" };
+  }
+  if (!res.ok || !data || data.ok === false) {
+    throw new Error(data && data.error ? data.error : "共享库同步失败。");
+  }
+  return data;
+}
+
+async function fetchTaoSharedLibrary() {
+  try {
+    setTaoSyncStatus("正在读取共享库...");
+    const data = await requestTaoSharedLibrary("GET");
+    const remote = saveRemoteTaoMasterNumbers(data.masters || []);
+    refreshTaoLibraryUI();
+    setTaoSyncStatus("共享库读取完成，共 " + remote.length + " 个。");
+    resetLog("TAO共享主单号库读取完成，共 " + remote.length + " 个。");
+  } catch (err) {
+    setTaoSyncStatus(err.message);
+    resetLog("读取TAO共享库失败：\n" + err.message);
+  }
+}
+
+async function syncTaoLibraryToShared() {
+  try {
+    const localAdditions = saveStoredTaoMasterNumbers(parseMasterNumbers($("taoLocalInput").value));
+    if (!localAdditions.length) {
+      setTaoSyncStatus("没有本机新增主单号需要同步。");
+      refreshTaoLibraryUI();
+      return;
+    }
+    setTaoSyncStatus("正在同步本机新增...");
+    const data = await requestTaoSharedLibrary("POST", localAdditions);
+    const remote = saveRemoteTaoMasterNumbers(data.masters || []);
+    saveStoredTaoMasterNumbers([]);
+    refreshTaoLibraryUI();
+    setTaoSyncStatus("同步完成，共享库现有 " + remote.length + " 个。");
+    resetLog("TAO主单号已同步。本次提交 " + localAdditions.length + " 个，共享库现有 " + remote.length + " 个。");
+  } catch (err) {
+    setTaoSyncStatus(err.message);
+    resetLog("同步TAO主单号失败：\n" + err.message);
+  }
+}
+
+function saveTaoLocalFromInput() {
+  const saved = saveStoredTaoMasterNumbers(parseMasterNumbers($("taoLocalInput").value));
+  refreshTaoLibraryUI();
+  resetLog("本机新增TAO主单号已保存，共 " + saved.length + " 个。");
+}
+
+function clearTaoLocal() {
+  saveStoredTaoMasterNumbers([]);
+  refreshTaoLibraryUI();
+  resetLog("已清空本机新增TAO主单号。内置和共享库不受影响。");
+}
+
+function rebuildWorksheetRange(ws) {
+  const addresses = Object.keys(ws).filter(key => key[0] !== "!");
+  if (!addresses.length) return ws;
+  const range = {
+    s: { r: Number.MAX_SAFE_INTEGER, c: Number.MAX_SAFE_INTEGER },
+    e: { r: 0, c: 0 }
+  };
+  addresses.forEach(addr => {
+    const cell = XLSX.utils.decode_cell(addr);
+    range.s.r = Math.min(range.s.r, cell.r);
+    range.s.c = Math.min(range.s.c, cell.c);
+    range.e.r = Math.max(range.e.r, cell.r);
+    range.e.c = Math.max(range.e.c, cell.c);
+  });
+  ws["!ref"] = XLSX.utils.encode_range(range);
+  return ws;
+}
+
+function readOverviewWorkbook(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        let wb;
+        if (/\.csv$/i.test(file.name)) {
+          let detected = Encoding.detect(data);
+          if (!detected) detected = "SJIS";
+          const unicodeArray = Encoding.convert(data, { to: "UNICODE", from: detected, type: "array" });
+          const text = Encoding.codeToString(unicodeArray);
+          wb = XLSX.read(text, { type: "string", raw: true, cellText: false, cellDates: false });
+        } else {
+          wb = XLSX.read(data, { type: "array", raw: true, cellText: false, cellDates: false });
+        }
+        const sheetName = wb.SheetNames[0];
+        const ws = rebuildWorksheetRange(wb.Sheets[sheetName]);
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+        resolve({ sheetName, rows });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function normalizeHeader(value) {
+  return toText(value).replace(/\s+/g, "").trim();
+}
+
+function findCol(headers, names, fallback) {
+  const normalized = headers.map(normalizeHeader);
+  for (const name of names) {
+    const idx = normalized.indexOf(normalizeHeader(name));
+    if (idx >= 0) return idx;
+  }
+  return fallback;
+}
+
+function getCell(row, index) {
+  return normalizeSpaces(row && row[index] != null ? row[index] : "");
+}
+
+function normalizeZip(value) {
+  return toHalfWidthDigits(value).replace(/[^0-9]/g, "");
+}
+
+function fixPhone(value) {
+  const original = toText(value);
+  let v = original
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\t\r\n \u00A0\u3000]+/g, "")
+    .trim()
+    .replace(/^['’`]+(?=[+＋])/, "");
+  let removedPrefix = false;
+  let removedPlusOnly = false;
+  let filledEmpty = false;
+  let cut = false;
+
+  while (/^[+＋]81/.test(v)) {
+    v = v.replace(/^[+＋]81/, "");
+    removedPrefix = true;
+  }
+
+  if (/^[+＋](?![+＋])/.test(v)) {
+    v = v.replace(/^[+＋]/, "");
+    if (!removedPrefix) removedPlusOnly = true;
+  }
+
+  if (!v) {
+    v = "00000000";
+    filledEmpty = true;
+  }
+
+  if (Array.from(v).length > 12) {
+    v = Array.from(v).slice(0, 12).join("");
+    cut = true;
+  }
+
+  return {
+    value: v,
+    changed: v !== original,
+    removedPrefix,
+    removedPlusOnly,
+    filledEmpty,
+    cut
+  };
+}
+
+function buildOverviewRecords(rows) {
+  if (!rows || rows.length < 2) throw new Error("一览表没有读取到数据。");
+  const headers = rows[0] || [];
+  const cols = {
+    agent: findCol(headers, ["代理店"], 0),
+    comment: findCol(headers, ["コメント"], 1),
+    status: findCol(headers, ["状態"], 2),
+    hawb: findCol(headers, ["HAWB番号"], 3),
+    mawb: findCol(headers, ["MAWB番号"], 4),
+    address: findCol(headers, ["收件人地址"], 11),
+    name: findCol(headers, ["輸入者名"], 12),
+    phone: findCol(headers, ["輸入者電話番号"], 13),
+    zip: findCol(headers, ["收件人郵便番号"], 14),
+    carrier: findCol(headers, ["配送業者"], 18),
+    trace: findCol(headers, ["追跡"], 19),
+    type: findCol(headers, ["タイプ"], 20),
+    port: findCol(headers, ["仕向港"], 24),
+    amount: findCol(headers, ["金额", "金額"], 26),
+    weight: findCol(headers, ["重量"], 28)
+  };
+
+  const records = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    if (row.every(cell => normalizeSpaces(cell) === "")) continue;
+    const phoneFixed = fixPhone(getCell(row, cols.phone));
+    records.push({
+      rowNo: i + 1,
+      row,
+      agent: getCell(row, cols.agent).toUpperCase(),
+      comment: getCell(row, cols.comment),
+      status: getCell(row, cols.status),
+      hawb: normalizeMasterNumber(getCell(row, cols.hawb)),
+      mawb: normalizeMasterNumber(getCell(row, cols.mawb)),
+      address: getCell(row, cols.address),
+      name: getCell(row, cols.name),
+      phone: phoneFixed.value,
+      phoneFixed,
+      zip: normalizeZip(getCell(row, cols.zip)),
+      carrier: getCell(row, cols.carrier),
+      trace: getCell(row, cols.trace),
+      type: getCell(row, cols.type),
+      port: getCell(row, cols.port),
+      amount: getCell(row, cols.amount),
+      weight: getCell(row, cols.weight)
+    });
+  }
+  return { headers, cols, records };
+}
+
+async function ensureOverviewData() {
+  const file = $("overviewFile").files[0];
+  if (!file) throw new Error("请先上传 HAWB 货物信息一览。");
+  if (overviewCache && overviewCache.file === file) return overviewCache.data;
+  const workbook = await readOverviewWorkbook(file);
+  const parsed = buildOverviewRecords(workbook.rows);
+  overviewCache = { file, data: { fileName: file.name, sheetName: workbook.sheetName, rows: workbook.rows, ...parsed } };
+  updateOverviewStatus();
+  return overviewCache.data;
+}
+
+function buildSortCodeIndex(rows) {
+  if (!rows || !rows.length) throw new Error("分拣码对照表没有读取到数据。");
+  const map = new Map();
+  const duplicates = [];
+  let skipped = 0;
+
+  rows.forEach((row, index) => {
+    const zip = normalizeZip(row && row[0]);
+    const code = normalizeSpaces(row && row[1]);
+    if (!zip || !code) {
+      skipped++;
+      return;
+    }
+    if (map.has(zip) && map.get(zip) !== code) {
+      duplicates.push(`第${index + 1}行 邮编${zip}重复：已使用${map.get(zip)}，重复值${code}`);
+      return;
+    }
+    map.set(zip, code);
+  });
+
+  return { map, count: map.size, duplicates, skipped };
+}
+
+async function ensureSortCodeData() {
+  const file = $("sortCodeFile").files[0];
+  if (!file) throw new Error("请先上传黑猫分拣码对照表。A列为邮编，B列为分拣码。");
+  if (sortCodeCache && sortCodeCache.file === file) return sortCodeCache.data;
+  const workbook = await readOverviewWorkbook(file);
+  const data = { fileName: file.name, sheetName: workbook.sheetName, ...buildSortCodeIndex(workbook.rows) };
+  sortCodeCache = { file, data };
+  updateSortCodeStatus();
+  return data;
+}
+
+function updateOverviewStatus() {
+  if (!overviewCache) {
+    $("overviewStatus").textContent = "等待上传一览表。";
+    return;
+  }
+  const data = overviewCache.data;
+  const agentCounts = countBy(data.records, r => r.agent || "空");
+  const agents = Object.entries(agentCounts).sort((a,b) => b[1] - a[1]).slice(0, 8).map(([k,v]) => `${k}:${v}`).join(" / ");
+  $("overviewStatus").innerHTML = `<strong>${data.fileName}</strong><br>Sheet: ${data.sheetName} / 数据行: ${data.records.length} / 代理店: ${agents}`;
+}
+
+function updateSortCodeStatus() {
+  if (!sortCodeCache) {
+    $("sortCodeStatus").textContent = "等待上传黑猫分拣码对照表。";
+    return;
+  }
+  const data = sortCodeCache.data;
+  $("sortCodeStatus").innerHTML = `<strong>${data.fileName}</strong><br>Sheet: ${data.sheetName} / 有效邮编分拣码: ${data.count} / 跳过空行或无效行: ${data.skipped} / 重复提示: ${data.duplicates.length}`;
+}
+
+function countBy(items, picker) {
+  const out = {};
+  items.forEach(item => {
+    const key = picker(item);
+    out[key] = (out[key] || 0) + 1;
+  });
+  return out;
+}
+
+function containsAny(text, words) {
+  const s = toHalfWidthAscii(text).toUpperCase();
+  return words.some(word => s.includes(toHalfWidthAscii(word).toUpperCase()));
+}
+
+function detectRegion(record, mode) {
+  if (mode === "tokyo") return { region: "tokyo", reason: "手动东京" };
+  if (mode === "osaka") return { region: "osaka", reason: "手动大阪" };
+
+  const text = [record.address, record.zip, record.port].join(" ");
+  if (containsAny(text, OSAKA_AREA_WORDS)) return { region: "osaka", reason: "地址大阪区域" };
+  if (containsAny(text, TOKYO_AREA_WORDS)) return { region: "tokyo", reason: "地址东京区域" };
+  return { region: "tokyo", reason: "未识别默认东京" };
+}
+
+function getOsakaSettingForAgent(agent) {
+  const normalized = toHalfWidthAscii(agent).toUpperCase().trim();
+  if (CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.includes(normalized)) {
+    return { ...SHIP_SETTINGS.cainiao_osaka, label: "菜鸟大阪" };
+  }
+  if (AGENT_SETTINGS[normalized]) {
+    const setting = AGENT_SETTINGS[normalized];
+    return { ...setting, label: "普通大阪-" + setting.label };
+  }
+  return { r: "0724636801", s: "", label: "普通大阪-未知代理店" };
+}
+
+function buildTargetRow(record, sizeCode, requestSetting, sortCode) {
+  const row = Array(TARGET_HEADERS.length).fill("");
+  row[0] = record.hawb;
+  row[1] = record.hawb;
+  row[2] = record.phone;
+  row[3] = record.name;
+  row[4] = record.zip;
+  row[5] = record.address;
+  row[11] = "0";
+  row[12] = record.amount;
+  row[13] = record.amount;
+  row[17] = requestSetting.r;
+  row[18] = requestSetting.s;
+  row[20] = sortCode || "";
+  row[23] = sizeCode;
+  row[25] = "0";
+  row[31] = "0";
+  row[33] = record.mawb;
+  return row;
+}
+
+function cleanOutputCell(value) {
+  return toHalfWidthAscii(value)
+    .replace(/[“”"]/g, "")
+    .replace(/,/g, " ")
+    .replace(/\r?\n/g, " ")
+    .replace(/[ \u3000]{2,}/g, " ")
+    .trim();
+}
+
+function sjisByteLength(value) {
+  const arr = Encoding.convert(toText(value), {
+    to: "SJIS",
+    from: "UNICODE",
+    type: "array"
+  });
+  return arr.length;
+}
+
+function truncateBySjisByte(value, maxBytes) {
+  const chars = Array.from(toText(value));
+  let out = "";
+  let used = 0;
+  for (const ch of chars) {
+    const bytes = sjisByteLength(ch);
+    if (used + bytes > maxBytes) break;
+    out += ch;
+    used += bytes;
+  }
+  return out;
+}
+
+function removeNullText(value) {
+  return toText(value)
+    .replace(/[\u0000\x00]/g, "")
+    .replace(/[NnＮｎ][\s\u3000]*[UuＵｕ][\s\u3000]*[LlＬｌ][\s\u3000]*[LlＬｌ]/g, "")
+    .replace(/ヌル/g, "");
+}
+
+function removeZipAndJapan(value) {
+  let s = toText(value);
+  s = s.replace(/[0-9０-９]{3}\s*[-－ー―]\s*[0-9０-９]{4}/g, " ");
+  s = s.replace(/\bJAPAN\b/gi, " ");
+  s = s.replace(/[JjＪｊ][AaＡａ][PpＰｐ][AaＡａ][NnＮｎ]/g, " ");
+  return normalizeSpaces(s);
+}
+
+function reduceWholeStringRepetition(value) {
+  const s = normalizeSpaces(value);
+  const chars = Array.from(s);
+  const n = chars.length;
+  if (n < 2) return s;
+  for (let len = 1; len <= Math.floor(n / 2); len++) {
+    if (n % len !== 0) continue;
+    const unit = chars.slice(0, len).join("");
+    if (unit && unit.repeat(n / len) === s) return unit;
+  }
+  return s;
+}
+
+function dedupeSeparatedParts(value) {
+  const original = normalizeSpaces(value);
+  if (!original) return "";
+  if (!/[\s,，、;；\/／|｜]/.test(original)) return original;
+  const seen = new Set();
+  const out = [];
+  original
+    .replace(/[,，、;；\/／|｜]+/g, " ")
+    .split(/\s+/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .forEach(part => {
+      if (seen.has(part)) return;
+      seen.add(part);
+      out.push(part);
+    });
+  return out.join(" ");
+}
+
+function fixSjisLength(value, maxBytes) {
+  const original = toText(value);
+  const beforeBytes = sjisByteLength(original);
+  if (beforeBytes <= maxBytes) {
+    return { value: original, changed: false, beforeBytes, afterBytes: beforeBytes, truncated: false };
+  }
+  const fixed = truncateBySjisByte(original, maxBytes);
+  return {
+    value: fixed,
+    changed: fixed !== original,
+    beforeBytes,
+    afterBytes: sjisByteLength(fixed),
+    truncated: true
+  };
+}
+
+function fixAddressLength(value, maxBytes) {
+  const original = toText(value);
+  const beforeBytes = sjisByteLength(original);
+  if (beforeBytes <= maxBytes) {
+    return { value: original, changed: false, beforeBytes, afterBytes: beforeBytes, steps: [] };
+  }
+
+  let v = original;
+  const steps = [];
+  const removed = removeZipAndJapan(v);
+  if (removed !== v) {
+    v = removed;
+    steps.push("删除邮编/JAPAN");
+  }
+  const reducedWhole = reduceWholeStringRepetition(v);
+  if (reducedWhole !== v) {
+    v = reducedWhole;
+    steps.push("删除整段重复内容");
+  }
+  const deduped = dedupeSeparatedParts(v);
+  if (deduped !== v) {
+    v = deduped;
+    steps.push("删除分隔重复内容");
+  }
+  if (sjisByteLength(v) > maxBytes) {
+    v = truncateBySjisByte(v, maxBytes);
+    steps.push("按95byte截断");
+  }
+  return {
+    value: v,
+    changed: v !== original,
+    beforeBytes,
+    afterBytes: sjisByteLength(v),
+    steps
+  };
+}
+
+function cleanGeneratedRow(rawRow, record, stats, details) {
+  const row = rawRow.map(value => cleanOutputCell(removeNullText(value)));
+
+  const nameOriginal = row[3];
+  const nameFixed = fixSjisLength(nameOriginal, NAME_MAX_SJIS_BYTES);
+  if (nameFixed.changed) {
+    row[3] = nameFixed.value;
+    stats.nameTruncated++;
+    details.push(`第${record.rowNo}行 单号${record.hawb || "空"}：D列收件人名 ${nameFixed.beforeBytes}byte -> ${nameFixed.afterBytes}byte，已截断为「${nameFixed.value}」`);
+  }
+
+  const addressOriginal = row[5];
+  const addressFixed = fixAddressLength(addressOriginal, ADDRESS_MAX_SJIS_BYTES);
+  if (addressFixed.changed) {
+    row[5] = addressFixed.value;
+    if (addressFixed.steps.some(step => step.includes("截断"))) stats.addressTruncated++;
+    else stats.addressCleaned++;
+    details.push(`第${record.rowNo}行 单号${record.hawb || "空"}：F列地址 ${addressFixed.beforeBytes}byte -> ${addressFixed.afterBytes}byte，${addressFixed.steps.join("、") || "已清洗"}，结果「${addressFixed.value}」`);
+  }
+
+  return row;
+}
+
+function cleanHeaderCell(value) {
+  return toText(value)
+    .replace(/[“”"]/g, "")
+    .replace(/,/g, " ")
+    .replace(/\r?\n/g, " ");
+}
+
+function rowsToCsv(rows) {
+  return rows.map((row, rowIndex) => {
+    const isHeader = rowIndex === 0 && row && TARGET_HEADERS.every((value, index) => row[index] === value);
+    const out = [];
+    for (let i = 0; i < TARGET_HEADERS.length; i++) {
+      const value = row[i] == null ? "" : row[i];
+      out.push(isHeader ? cleanHeaderCell(value) : cleanOutputCell(value));
+    }
+    return out.join(",");
+  }).join("\r\n") + "\r\n";
+}
+
+function downloadSjisCsv(csvText, outputName) {
+  const sjisArray = Encoding.convert(csvText, { to: "SJIS", from: "UNICODE", type: "array" });
+  const blob = new Blob([new Uint8Array(sjisArray)], { type: "text/csv;charset=Shift_JIS" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = outputName;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function formatDateTimeForFile(date = new Date()) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+function summarizeLimited(title, list, limit = 80) {
+  if (!list.length) return;
+  log("\n" + title + "（最多显示" + limit + "条）:");
+  list.slice(0, limit).forEach(item => log(item));
+  if (list.length > limit) log("...还有 " + (list.length - limit) + " 条");
+}
+
+function finishDownload(rows, fileName, includeHeader = true) {
+  const outputRows = includeHeader ? [TARGET_HEADERS].concat(rows) : rows;
+  downloadSjisCsv(rowsToCsv(outputRows), fileName);
+}
+
+const GENERATION_MODES = {
+  normalTokyo: {
+    label: "普通东京宅配",
+    fileBase: "黑猫宅急便",
+    fileTag: "普通东京",
+    sizeCode: "0101",
+    requestSetting(record) {
+      return { setting: SHIP_SETTINGS.normal_tokyo, label: "普通东京" };
+    }
+  },
+  cainiaoTokyo: {
+    label: "菜鸟东京宅配",
+    fileBase: "黑猫宅急便",
+    fileTag: "菜鸟东京",
+    sizeCode: "0101",
+    skipCainiaoAgent: true,
+    requireTaoHit: true,
+    requestSetting(record) {
+      return { setting: SHIP_SETTINGS.cainiao_tokyo, label: "菜鸟东京" };
+    }
+  },
+  normalOsaka: {
+    label: "普通大阪宅配",
+    fileBase: "黑猫宅急便",
+    fileTagOrder: ["菜鸟大阪", "普通大阪"],
+    fileTag(request) {
+      return request.label === "菜鸟大阪" ? "菜鸟大阪" : "普通大阪";
+    },
+    sizeCode: "0101",
+    requestSetting(record) {
+      const setting = getOsakaSettingForAgent(record.agent);
+      return { setting, label: setting.label };
+    }
+  },
+  tokyoPosting: {
+    label: "东京投函",
+    fileBase: "黑猫投函",
+    fileTagOrder: ["普通东京投函", "TAO投函"],
+    sizeCode: "0501",
+    splitByTaoHit: true,
+    requestSetting(record, taoSet) {
+      const taoHit = !!record.mawb && taoSet.has(record.mawb);
+      if (taoHit) {
+        return { setting: SHIP_SETTINGS.cainiao_tokyo, label: "TAO投函", fileTag: "TAO投函", taoHit };
+      }
+      return { setting: SHIP_SETTINGS.normal_tokyo, label: "普通东京投函", fileTag: "普通东京投函", taoHit };
+    }
+  }
+};
+
+function getOutputFileTag(mode, request) {
+  if (request.fileTag) return request.fileTag;
+  return typeof mode.fileTag === "function" ? mode.fileTag(request) : mode.fileTag;
+}
+
+function pushOutputGroup(groups, tag, row) {
+  if (!groups.has(tag)) groups.set(tag, []);
+  groups.get(tag).push(row);
+}
+
+function orderedOutputGroups(mode, groups) {
+  const entries = Array.from(groups.entries());
+  if (!mode.fileTagOrder) return entries;
+  return entries.sort((a, b) => {
+    const ai = mode.fileTagOrder.indexOf(a[0]);
+    const bi = mode.fileTagOrder.indexOf(b[0]);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+  });
+}
+
+function downloadOutputGroups(mode, groups) {
+  const timestamp = formatDateTimeForFile();
+  const files = [];
+  orderedOutputGroups(mode, groups).forEach(([tag, rows], index) => {
+    const fileName = `${mode.fileBase}_${tag}_${timestamp}.csv`;
+    files.push({ fileName, count: rows.length });
+    window.setTimeout(() => finishDownload(rows, fileName, true), index * 250);
+  });
+  return files;
+}
+
+async function processMode(modeKey) {
+  const mode = GENERATION_MODES[modeKey];
+  try {
+    resetLog(mode.label + " 数据制作中...");
+    const data = await ensureOverviewData();
+    const sortCodeData = await ensureSortCodeData();
+    const taoSet = new Set(getTaoMasterLibrary());
+    const generated = [];
+    const outputGroups = new Map();
+    const stats = {
+      processed: 0,
+      generated: 0,
+      postingSkipped: 0,
+      keywordSkipped: 0,
+      cainiaoSkipped: 0,
+      taoMissingSkipped: 0,
+      sortMissingSkipped: 0,
+      phoneFixed: 0
+    };
+    const requestCounts = {};
+    const taoMissing = [];
+    const unknownAgents = [];
+    const cainiaoSkippedDetails = [];
+    const phoneDetails = [];
+    const sortMissing = [];
+    const cleanDetails = [];
+    const cleanStats = {
+      nameTruncated: 0,
+      addressCleaned: 0,
+      addressTruncated: 0
+    };
+
+    data.records.forEach(record => {
+      stats.processed++;
+
+      if (mode.skipCainiaoAgent && record.agent === "CAINIAO") {
+        stats.cainiaoSkipped++;
+        const taoHitText = record.mawb && taoSet.has(record.mawb) ? "TAO命中" : "TAO未命中";
+        cainiaoSkippedDetails.push(`第${record.rowNo}行 HAWB ${record.hawb} / 一览表MAWB番号 ${record.mawb || "空"}（生成CSV的発送管理番号）/ 代理店CAINIAO跳过（${taoHitText}）`);
+        return;
+      }
+
+      const mustHitTao = !!mode.requireTaoHit;
+      if (mode.requireTaoHit || mode.warnTaoMissing) {
+        if (!record.mawb || !taoSet.has(record.mawb)) {
+          taoMissing.push(`第${record.rowNo}行 HAWB ${record.hawb} / 一览表MAWB番号 ${record.mawb || "空"}（生成CSV的発送管理番号）不在TAO库`);
+          if (mustHitTao) {
+            stats.taoMissingSkipped++;
+            return;
+          }
+        }
+      }
+
+      const sortCode = sortCodeData.map.get(record.zip) || "";
+      if (!sortCode) {
+        sortMissing.push(`第${record.rowNo}行 单号${record.hawb || "空"}：邮编${record.zip || "空"}有问题，导致分拣码无法匹配，已不生成`);
+        stats.sortMissingSkipped++;
+        return;
+      }
+
+      if (record.phoneFixed.changed) {
+        stats.phoneFixed++;
+        if (phoneDetails.length < 80) phoneDetails.push(`第${record.rowNo}行 ${record.hawb}: 电话 ${getCell(record.row, data.cols.phone)} -> ${record.phone}`);
+      }
+
+      const request = mode.requestSetting(record, taoSet);
+      if (request.label.includes("未知代理店")) {
+        unknownAgents.push(`第${record.rowNo}行 HAWB ${record.hawb}: 代理店 ${record.agent || "空"} 使用默认大阪请求码`);
+      }
+      requestCounts[request.label] = (requestCounts[request.label] || 0) + 1;
+      const outputRow = cleanGeneratedRow(
+        buildTargetRow(record, mode.sizeCode, request.setting, sortCode),
+        record,
+        cleanStats,
+        cleanDetails
+      );
+      generated.push(outputRow);
+      pushOutputGroup(outputGroups, getOutputFileTag(mode, request), outputRow);
+      stats.generated++;
+    });
+
+    if (!generated.length) {
+      log("没有生成数据。请确认一览表、分拣码表、窗口类型和筛选条件。");
+      if (stats.cainiaoSkipped) log("代理店 CAINIAO 跳过: " + stats.cainiaoSkipped + " 条。");
+      if (stats.taoMissingSkipped) log("已因TAO未命中跳过: " + stats.taoMissingSkipped + " 条。");
+      if (stats.sortMissingSkipped) log("已因邮编有问题导致分拣码无法匹配，跳过: " + stats.sortMissingSkipped + " 条。");
+      summarizeLimited("代理店CAINIAO跳过明细", cainiaoSkippedDetails);
+      summarizeLimited("TAO未命中明细", taoMissing);
+      summarizeLimited("分拣码未匹配明细", sortMissing);
+      return;
+    }
+
+    const outputFiles = downloadOutputGroups(mode, outputGroups);
+
+    log("生成完成。");
+    log("窗口类型: " + mode.label);
+    log("源文件: " + data.fileName);
+    log("处理数据行: " + stats.processed);
+    log("生成数据: " + stats.generated);
+    log("寸法単位コード: " + mode.sizeCode);
+    if (stats.cainiaoSkipped) log("代理店 CAINIAO 跳过: " + stats.cainiaoSkipped);
+    if (stats.taoMissingSkipped) log("TAO未命中跳过: " + stats.taoMissingSkipped);
+    if (stats.sortMissingSkipped) log("邮编有问题导致分拣码无法匹配，已不生成: " + stats.sortMissingSkipped);
+    log("请求码统计: " + Object.entries(requestCounts).map(([k,v]) => `${k}:${v}`).join(" / "));
+    if (mode.splitByTaoHit) log("投函拆分: 命中TAO的进入TAO投函，未命中的进入普通东京投函。");
+    log("电话清洗: " + stats.phoneFixed + " 条");
+    log("预定数据清洗: D列收件人名截断 " + cleanStats.nameTruncated + " 条 / F列地址清理 " + cleanStats.addressCleaned + " 条 / F列地址截断 " + cleanStats.addressTruncated + " 条");
+    log("输出清理: 生成后先清洗再写CSV；数据行已去null、去双引号、逗号换空格、全角英数符号转半角；B行表头保持原样。");
+    summarizeLimited("电话清洗明细", phoneDetails);
+    summarizeLimited("预定数据D/F列清洗明细", cleanDetails);
+    summarizeLimited("代理店CAINIAO跳过明细", cainiaoSkippedDetails);
+    summarizeLimited("一览表MAWB番号未命中TAO库提示", taoMissing);
+    summarizeLimited("邮编问题导致分拣码无法匹配明细", sortMissing);
+    summarizeLimited("分拣码表重复邮编提示", sortCodeData.duplicates);
+    summarizeLimited("未知代理店提示", unknownAgents);
+    log("\n已生成下载文件:");
+    outputFiles.forEach(file => log(file.fileName + "（" + file.count + "条）"));
+  } catch (err) {
+    console.error(err);
+    resetLog(mode.label + " 生成出错：\n" + err.message);
+  }
+}
+
+function switchPanel(name) {
+  const names = ["NormalTokyo", "CainiaoTokyo", "NormalOsaka", "TokyoPosting"];
+  names.forEach(item => {
+    const active = item === name;
+    $("tab" + item).classList.toggle("active", active);
+    $("panel" + item).classList.toggle("active", active);
+  });
+}
+
+$("overviewFile").addEventListener("change", async () => {
+  overviewCache = null;
+  const file = $("overviewFile").files[0];
+  if (!file) {
+    updateOverviewStatus();
+    return;
+  }
+  try {
+    $("overviewStatus").textContent = "正在读取 " + file.name + "...";
+    await ensureOverviewData();
+    resetLog("一览表读取完成，可以生成黑猫预定数据。");
+  } catch (err) {
+    overviewCache = null;
+    $("overviewStatus").textContent = "读取失败：" + err.message;
+    resetLog("一览表读取失败：\n" + err.message);
+  }
+});
+
+$("sortCodeFile").addEventListener("change", async () => {
+  sortCodeCache = null;
+  const file = $("sortCodeFile").files[0];
+  if (!file) {
+    updateSortCodeStatus();
+    return;
+  }
+  try {
+    $("sortCodeStatus").textContent = "正在读取 " + file.name + "...";
+    await ensureSortCodeData();
+    resetLog("黑猫分拣码对照表读取完成。");
+  } catch (err) {
+    sortCodeCache = null;
+    $("sortCodeStatus").textContent = "读取失败：" + err.message;
+    resetLog("黑猫分拣码对照表读取失败：\n" + err.message);
+  }
+});
+
+$("refreshTaoBtn").addEventListener("click", refreshTaoLibraryUI);
+$("taoFetchBtn").addEventListener("click", fetchTaoSharedLibrary);
+$("taoSyncBtn").addEventListener("click", syncTaoLibraryToShared);
+$("taoSaveLocalBtn").addEventListener("click", saveTaoLocalFromInput);
+$("taoClearLocalBtn").addEventListener("click", clearTaoLocal);
+$("tabNormalTokyo").addEventListener("click", () => switchPanel("NormalTokyo"));
+$("tabCainiaoTokyo").addEventListener("click", () => switchPanel("CainiaoTokyo"));
+$("tabNormalOsaka").addEventListener("click", () => switchPanel("NormalOsaka"));
+$("tabTokyoPosting").addEventListener("click", () => switchPanel("TokyoPosting"));
+$("runNormalTokyoBtn").addEventListener("click", () => processMode("normalTokyo"));
+$("runCainiaoTokyoBtn").addEventListener("click", () => processMode("cainiaoTokyo"));
+$("runNormalOsakaBtn").addEventListener("click", () => processMode("normalOsaka"));
+$("runTokyoPostingBtn").addEventListener("click", () => processMode("tokyoPosting"));
+
+refreshTaoLibraryUI();
+</script>
+</body>
+</html>
