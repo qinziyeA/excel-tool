@@ -1324,5 +1324,77 @@
     "sagawa": "364041987013",
     "madeAt": "2026-08-08T08:27:22.481Z",
     "outputName": "YNE0808.csv"
+  },
+  {
+    "yne": "YNE2102323",
+    "sagawa": "364041977261",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE2102324",
+    "sagawa": "364041977272",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE3011431",
+    "sagawa": "364041976701",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE3011432",
+    "sagawa": "364041976712",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE3011433",
+    "sagawa": "364041976723",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE3011436",
+    "sagawa": "364041976734",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE6013324",
+    "sagawa": "364041959746",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE6014394",
+    "sagawa": "364041959772",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE6018800",
+    "sagawa": "364041959783",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE6024949",
+    "sagawa": "364041959761",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE6029945",
+    "sagawa": "364041959750",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
+  },
+  {
+    "yne": "YNE8002831",
+    "sagawa": "359964386375",
+    "madeAt": "2026-08-13T08:08:40.159Z",
+    "outputName": "YNE0813.csv"
   }
 ]
