@@ -3688,6 +3688,14 @@
         </span>
       </label>
       <label class="radio-card">
+        <input type="radio" name="shipType" value="osaka_mailbox" />
+        <span class="dot"></span>
+        <span>
+          <div class="text">大阪投函</div>
+          <div class="sub">S列固定050</div>
+        </span>
+      </label>
+      <label class="radio-card">
         <input type="radio" name="shipType" value="normal_tokyo" />
         <span class="dot"></span>
         <span>
@@ -3946,6 +3954,7 @@
 
   const SHIP_SETTINGS = {
     cainiao_osaka: { label: "菜鸟大阪", r: "036429996021", s: "" },
+    osaka_mailbox: { label: "大阪投函", r: "0724636801", s: "050" },
     normal_tokyo: { label: "普通东京", preserveRequestCode: true },
     tokyo_mailbox: { label: "东京投函", preserveRequestCode: true },
     cainiao_tokyo: { label: "菜鸟东京", r: "036429996010", s: "" }
@@ -5675,6 +5684,16 @@
       icon: "OS",
       label: "OSAKA",
       mark: "AGENT"
+    },
+    osaka_mailbox: {
+      title: "大阪投函",
+      sub: "R列写入大阪基础请求码，S列固定050。",
+      theme: "green",
+      rank: "O",
+      suit: "♣",
+      icon: "OS",
+      label: "MAIL",
+      mark: "OSAKA"
     },
     normal_tokyo: {
       title: "普通东京",
