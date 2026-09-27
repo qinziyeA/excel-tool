@@ -3693,6 +3693,14 @@
     <div id="reservedDataPanel">
     <div class="section-title">③ 选择类型</div>
     <div class="type-grid" id="typeGroup">
+      <label class="radio-card">
+        <input type="radio" name="shipType" value="auto_osaka" />
+        <span class="dot"></span>
+        <span>
+          <div class="text">大阪自动分类</div>
+          <div class="sub">九州 / 菜鸟四家 / 一般</div>
+        </span>
+      </label>
       <label class="radio-card selected">
         <input type="radio" name="shipType" value="cainiao_osaka" checked />
         <span class="dot"></span>
@@ -3975,6 +3983,7 @@
   const $ = (id) => document.getElementById(id);
 
   const SHIP_SETTINGS = {
+    auto_osaka: { label: "大阪自动分类", autoSplit: true },
     cainiao_osaka: { label: "菜鸟大阪", r: "036429996021", s: "" },
     osaka_mailbox: { label: "大阪投函", r: "0724636801", s: "050" },
     normal_tokyo: { label: "普通东京", preserveRequestCode: true },
@@ -4842,6 +4851,20 @@
     ].join("") + "_" + [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join("");
   }
 
+  function downloadTextFile(text, outputName) {
+    const blob = new Blob([text], { type: "text/plain;charset=UTF-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = outputName;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  function formatDateForFile(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return date.getFullYear() + pad(date.getMonth() + 1) + pad(date.getDate());
+  }
+
   function normalizeYneNo(value) {
     const match = toText(value).replace(/"/g, "").toUpperCase().match(/YNE\d+/);
     return match ? match[0] : "";
@@ -5424,6 +5447,127 @@
     }) || "";
   }
 
+  function getReservationOsakaCainiaoAgent(row) {
+    if (requestPartMatches(row[18], "036")) return "S列036";
+    return CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.find(agent => {
+      const setting = AGENT_SETTINGS[agent];
+      return requestPartMatches(row[17], setting.r) && requestPartMatches(row[18], setting.s);
+    }) || "";
+  }
+
+  function normalizePostalNumber(value) {
+    const digits = toHalfWidthDigits(toText(value)).replace(/\D/g, "");
+    return /^\d{7}$/.test(digits) ? Number(digits) : NaN;
+  }
+
+  function isKyushuPostalCode(value) {
+    const postal = normalizePostalNumber(value);
+    return Number.isFinite(postal) && postal >= 8000000 && postal <= 8998692;
+  }
+
+  function cleanAutoSplitReservationRow(sourceRow, rowNo, requestCode) {
+    const row = Array.isArray(sourceRow) ? sourceRow.slice() : [];
+    const COL_C_PHONE = 2;
+    const COL_D_NAME = 3;
+    const COL_F_ADDR = 5;
+    const COL_H_ADDR = 7;
+    const COL_M_NAME = 12;
+    const COL_N_ADDR = 13;
+    const COL_R_CODE = 17;
+    const COL_S_CODE = 18;
+
+    row[COL_C_PHONE] = fixPhone(row[COL_C_PHONE]).value;
+    row[COL_D_NAME] = fixSjisLength(row[COL_D_NAME], 27).value;
+    const quietStats = { fNullRemoved: 0, hNullRemoved: 0, nNullRemoved: 0 };
+    const noDetail = () => {};
+    removeNullInAddressColumn(row, COL_F_ADDR, "F列", rowNo, "fNullRemoved", quietStats, noDetail);
+    row[COL_F_ADDR] = fixFAddress(row[COL_F_ADDR], 95).value;
+    removeNullInAddressColumn(row, COL_H_ADDR, "H列", rowNo, "hNullRemoved", quietStats, noDetail);
+    row[COL_H_ADDR] = fixSjisLength(row[COL_H_ADDR], 95).value;
+    removeNullInAddressColumn(row, COL_N_ADDR, "N列", rowNo, "nNullRemoved", quietStats, noDetail);
+    row[COL_N_ADDR] = fixSjisLength(row[COL_N_ADDR], 95).value;
+    row[COL_M_NAME] = fixSjisLength(row[COL_M_NAME], 15).value;
+
+    if (requestCode) {
+      row[COL_R_CODE] = requestCode.r;
+      row[COL_S_CODE] = requestCode.s;
+    }
+    return row;
+  }
+
+  async function processAutoOsakaReservation(file, rows, detected, startRow) {
+    const headerRows = rows.slice(0, startRow).map(row => Array.isArray(row) ? row.slice() : []);
+    const mailboxSuspects = [];
+    for (let r = startRow; r < rows.length; r++) {
+      const row = rows[r] || [];
+      if (isEmptyRow(row)) continue;
+      const trackingNo = toHalfWidthDigits(toText(row[1])).trim().replace(/^["']+/, "");
+      if (/^[36]/.test(trackingNo)) {
+        mailboxSuspects.push({ rowNo: r + 1, trackingNo });
+      }
+    }
+
+    if (mailboxSuspects.length) {
+      const lines = mailboxSuspects.map(item => `第${item.rowNo}行：${item.trackingNo}`);
+      const message = `发现${mailboxSuspects.length}条B列单号以3或6开头，本次不生成文件。\n\n${lines.join("\n")}\n\n请检查是否混入投函`;
+      resetLog(message);
+      alert(message);
+      return false;
+    }
+
+    const kyushuRows = [];
+    const cainiaoRows = [];
+    const generalRows = [];
+    const kyushuEmptyAddress = [];
+    const cainiaoEmptyAddress = [];
+    const cainiaoReasons = CONFIRMED_OSAKA_TO_CAINIAO_AGENTS.concat("S列036");
+    const agentCounts = Object.fromEntries(cainiaoReasons.map(reason => [reason, 0]));
+
+    for (let r = startRow; r < rows.length; r++) {
+      const sourceRow = rows[r] || [];
+      if (isEmptyRow(sourceRow)) continue;
+      const rowNo = r + 1;
+      const trackingNo = toText(sourceRow[1]).trim();
+      const addressEmpty = !toText(sourceRow[5]).trim();
+
+      if (isKyushuPostalCode(sourceRow[4])) {
+        if (addressEmpty) kyushuEmptyAddress.push(trackingNo);
+        kyushuRows.push(cleanAutoSplitReservationRow(sourceRow, rowNo, { r: "036825990001", s: "" }));
+        continue;
+      }
+
+      const cainiaoAgent = getReservationOsakaCainiaoAgent(sourceRow);
+      if (cainiaoAgent) {
+        agentCounts[cainiaoAgent]++;
+        if (addressEmpty) cainiaoEmptyAddress.push(trackingNo);
+        cainiaoRows.push(cleanAutoSplitReservationRow(sourceRow, rowNo, SHIP_SETTINGS.cainiao_osaka));
+        continue;
+      }
+
+      generalRows.push(cleanAutoSplitReservationRow(sourceRow, rowNo, null));
+    }
+
+    const date = formatDateForFile();
+    const outputs = [
+      { name: `${date}_九州数据.csv`, rows: headerRows.concat(kyushuRows) },
+      { name: `${date}_菜鸟数据.csv`, rows: headerRows.concat(cainiaoRows) },
+      { name: `${date}_一般数据.csv`, rows: headerRows.concat(generalRows) }
+    ];
+    outputs.forEach(output => downloadSjisCsv(rowsToCsv(output.rows), output.name));
+    if (kyushuEmptyAddress.length) downloadTextFile(kyushuEmptyAddress.join("\r\n"), "九州空地址.txt");
+    if (cainiaoEmptyAddress.length) downloadTextFile(cainiaoEmptyAddress.join("\r\n"), "菜鸟空地址.txt");
+
+    log("自动分类完成。原文件编码: " + detected);
+    log("九州数据: " + kyushuRows.length + "条，R列=036825990001，S列=空");
+    log("菜鸟数据: " + cainiaoRows.length + "条，四家请求码或S列036已改为菜鸟大阪请求码");
+    cainiaoReasons.forEach(reason => log("  " + reason + ": " + agentCounts[reason] + "条"));
+    log("一般数据: " + generalRows.length + "条，请求码保持原样");
+    log("九州F列空地址: " + kyushuEmptyAddress.length + "条" + (kyushuEmptyAddress.length ? "，已生成九州空地址.txt" : ""));
+    log("菜鸟F列空地址: " + cainiaoEmptyAddress.length + "条" + (cainiaoEmptyAddress.length ? "，已生成菜鸟空地址.txt" : ""));
+    outputs.forEach(output => log("已生成下载文件: " + output.name));
+    return true;
+  }
+
   function parseWeightNumber(value) {
     const s = toHalfWidthDigits(toText(value))
       .replace(/[．。]/g, ".")
@@ -5666,6 +5810,9 @@
 
   function getShippingSetting() {
     const shipType = getSelectedValue("shipType");
+    if (shipType === "auto_osaka") {
+      return { type: "大阪自动分类", label: "大阪自动分类", autoSplit: true };
+    }
     if (shipType === "normal_osaka") {
       const agent = getSelectedValue("agent") || "YNE";
       const setting = AGENT_SETTINGS[agent];
@@ -5687,6 +5834,16 @@
   }
 
   const FEATURE_CARDS = {
+    auto_osaka: {
+      title: "大阪自动分类",
+      sub: "按顺序拆分九州、菜鸟四家和一般数据，并分别清洗导出。",
+      theme: "blue",
+      rank: "A",
+      suit: "♠",
+      icon: "AUTO",
+      label: "OSAKA",
+      mark: "SPLIT"
+    },
     cainiao_osaka: {
       title: "菜鸟大阪",
       sub: "无需额外选择，直接上传 CSV 后执行。",
@@ -6080,6 +6237,12 @@
       const { rows, detected } = await readCsvFile(file);
       log("读取编码: " + detected);
       log("总行数: " + rows.length);
+      if (shipping.autoSplit) {
+        log("选择类型: 大阪自动分类");
+        log("分流顺序: 九州邮编 → YNE/MMA/RG/NY或S列036的菜鸟数据 → 一般数据");
+        await processAutoOsakaReservation(file, rows, detected, startRow);
+        return;
+      }
       log("选择类型: " + shipping.label + (shipping.preserveRequestCode ? "，R/S列保留导入数据的请求码" : "，R列=" + shipping.r + "，S列=" + (shipping.s || "空")));
       log("邮编匹配: " + (zipMatchEnabled ? "启用" : "未启用"));
 
