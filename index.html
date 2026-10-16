@@ -3954,6 +3954,7 @@
             <textarea id="sagawaSagawaList" spellcheck="false" placeholder="123456789012&#10;123456789013"></textarea>
           </div>
         </div>
+        <div class="sagawa-note">左右两列必须数量一致并逐行对应；数量不同或存在无效行时不会生成。</div>
       </div>
 
       <div id="sagawaHistoryNotice" class="sagawa-history-notice">
@@ -5184,24 +5185,53 @@
   }
 
   function parseSagawaSplitInputs(map, warnings) {
-    const ynes = $("sagawaYneList").value
-      .split(/\r?\n/)
-      .map(normalizeYneNo)
-      .filter(Boolean);
-    const sagawas = $("sagawaSagawaList").value
-      .split(/\r?\n/)
-      .map(normalizeSagawaNo)
-      .filter(Boolean);
-
-    if (ynes.length !== sagawas.length) {
-      warnings.push(`左右两列数量不一致：YNE ${ynes.length} 条，佐川 ${sagawas.length} 条。只按较短数量配对。`);
+    function getAlignedLines(value) {
+      const lines = toText(value).split(/\r?\n/).map(line => line.trim());
+      while (lines.length && !lines[0]) lines.shift();
+      while (lines.length && !lines[lines.length - 1]) lines.pop();
+      return lines;
     }
 
-    const n = Math.min(ynes.length, sagawas.length);
-    for (let i = 0; i < n; i++) {
-      addSagawaPair(map, warnings, `左右两列第${i + 1}行`, ynes[i], sagawas[i]);
+    const yneLines = getAlignedLines($("sagawaYneList").value);
+    const sagawaLines = getAlignedLines($("sagawaSagawaList").value);
+    if (yneLines.length !== sagawaLines.length) {
+      const difference = Math.abs(yneLines.length - sagawaLines.length);
+      const err = new Error(
+        `YNE单号和佐川单号数量不一致，已停止生成。\n` +
+        `YNE单号：${yneLines.length}条\n` +
+        `佐川单号：${sagawaLines.length}条\n` +
+        `相差：${difference}条\n\n请检查两边数量后再生成，防止单号窜行。`
+      );
+      err.isSagawaInputValidation = true;
+      throw err;
     }
-    return n;
+
+    const invalidLines = [];
+    const pairs = [];
+    for (let i = 0; i < yneLines.length; i++) {
+      const yne = normalizeYneNo(yneLines[i]);
+      const sagawa = normalizeSagawaNo(sagawaLines[i]);
+      if (!yne || !sagawa) {
+        invalidLines.push(`第${i + 1}行：YNE=${yneLines[i] || "空"}，佐川=${sagawaLines[i] || "空"}`);
+      } else {
+        pairs.push({ yne, sagawa, rowNo: i + 1 });
+      }
+    }
+
+    if (invalidLines.length) {
+      const err = new Error(
+        `发现${invalidLines.length}行无效或空白的单号，已停止生成。\n\n` +
+        invalidLines.join("\n") +
+        `\n\n请逐行检查，防止单号窜行。`
+      );
+      err.isSagawaInputValidation = true;
+      throw err;
+    }
+
+    for (const pair of pairs) {
+      addSagawaPair(map, warnings, `左右两列第${pair.rowNo}行`, pair.yne, pair.sagawa);
+    }
+    return pairs.length;
   }
 
   function buildSagawaMap() {
@@ -5441,6 +5471,7 @@
     } catch (err) {
       console.error(err);
       resetLog("佐川数据生成出错：\n" + err.message);
+      if (err && err.isSagawaInputValidation) alert(err.message);
     }
   }
 
