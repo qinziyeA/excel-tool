@@ -5109,7 +5109,9 @@
 
     const uniqueMatches = uniqueSagawaHistoryMatches(matches);
     const newCount = (newItems || []).length;
-    summary.textContent = `发现 ${uniqueMatches.length} 个单号之前制作过；本次还有 ${newCount} 行新数据。请选择继续方式。`;
+    summary.textContent = newCount > 0
+      ? `发现 ${uniqueMatches.length} 个单号之前制作过；本次还有 ${newCount} 行新数据。请选择继续方式。`
+      : `本次匹配到的数据全部制作过，没有新数据。如需重新生成，请点击“全部制作”。`;
     list.innerHTML = "";
     uniqueMatches.slice(0, 80).forEach(match => {
       const li = document.createElement("li");
@@ -5277,7 +5279,11 @@
       const ref = await readReferenceWorkbook(file);
       const dataRows = ref.rows.slice(1);
       stats.push(`${file.name} ${dataRows.length}行`);
-      dataRows.forEach(row => all.push({ row, fileName: file.name }));
+      dataRows.forEach((row, index) => all.push({
+        row,
+        fileName: file.name,
+        rowNo: index + 2
+      }));
     }
 
     return { all, stats };
@@ -5288,6 +5294,7 @@
     const dataYneSet = new Set();
     const generatedYnes = [];
     const generatedItems = [];
+    const akMismatches = [];
 
     for (const item of cargoRows) {
       const r = item.row || [];
@@ -5295,6 +5302,18 @@
       if (key) dataYneSet.add(key);
       if (!key || !sagawaMap[key]) continue;
       const sagawa = toText(sagawaMap[key]).trim();
+      const akSagawa = normalizeSagawaNo(r[36]);
+
+      // AK列若已有代理店提供的36开头佐川号，必须和手动输入的对照一致。
+      if (akSagawa.startsWith("36") && akSagawa !== sagawa) {
+        akMismatches.push({
+          fileName: item.fileName || "货物信息表",
+          rowNo: item.rowNo || "?",
+          yne: key,
+          inputSagawa: sagawa,
+          akSagawa
+        });
+      }
 
       const csvRow = [
         todayFullForSagawa(),
@@ -5314,7 +5333,7 @@
       generatedItems.push({ yne: key, sagawa, row: csvRow });
     }
 
-    return { result, dataYneSet, generatedYnes, generatedItems };
+    return { result, dataYneSet, generatedYnes, generatedItems, akMismatches };
   }
 
   function todayFullForSagawa() {
@@ -5391,7 +5410,11 @@
     const items = mode === "new" ? context.newItems : context.generatedItems;
     const choiceLabel = mode === "new" ? "只做新的" : (context.duplicateMatches.length ? "全部制作" : "正常生成");
     if (!items.length) {
-      log("\n没有新的佐川数据需要生成。");
+      if (mode === "new" && context.generatedItems.length) {
+        log(`\n本次匹配到的 ${context.generatedItems.length} 行数据全部已在历史库中。需要重新生成时请点击“全部制作”。`);
+      } else {
+        log("\n没有匹配到可生成的佐川数据，请检查货物表E列YNE单号与输入对照。");
+      }
       return;
     }
 
@@ -5431,9 +5454,55 @@
       const { all, stats } = await readAllSagawaCargoRows(sagawaDataFileStore);
       log("货物表: " + stats.join(" / "));
 
-      const { dataYneSet, generatedItems } = buildSagawaCsvRows(all, map);
+      const { dataYneSet, generatedItems, akMismatches } = buildSagawaCsvRows(all, map);
       const notFound = mapKeys.filter(key => !dataYneSet.has(key));
       const dataWithoutSagawa = Array.from(dataYneSet).filter(key => !map[key]);
+
+      if (akMismatches.length) {
+        const alertLimit = 30;
+        const alertLines = akMismatches.slice(0, alertLimit).map(item =>
+          `${item.fileName} 第${item.rowNo}行：${item.yne}\n输入=${item.inputSagawa} / AK列=${item.akSagawa}`
+        );
+        if (akMismatches.length > alertLimit) {
+          alertLines.push(`...还有${akMismatches.length - alertLimit}条，请查看页面处理记录。`);
+        }
+        const message = [
+          `发现${akMismatches.length}条佐川单号与清关预报AK列不一致，本次已停止生成。`,
+          "预报AK列为代理店提供的佐川单号，请确认手动输入是否有误。",
+          "",
+          ...alertLines
+        ].join("\n");
+        resetLog(message);
+        if (akMismatches.length > alertLimit) {
+          log("\n全部不一致明细:");
+          akMismatches.forEach(item => {
+            log(`${item.fileName} 第${item.rowNo}行：${item.yne}，输入=${item.inputSagawa}，AK列=${item.akSagawa}`);
+          });
+        }
+        alert(message);
+        return;
+      }
+
+      if (!generatedItems.length) {
+        const message = [
+          "没有匹配到可生成的佐川数据。",
+          `输入有效对照：${mapKeys.length}条`,
+          `货物表E列未找到：${notFound.length}条`,
+          "请检查输入的YNE单号是否确实存在于货物信息表E列。"
+        ].join("\n");
+        resetLog(message);
+        if (notFound.length) {
+          log("\n未在货物表E列查到以下单号:");
+          notFound.forEach(key => log(`${key}-${map[key]}`));
+        }
+        if (dataWithoutSagawa.length) {
+          log("\n货物表里存在但没有输入佐川对照的YNE单号:");
+          dataWithoutSagawa.slice(0, 80).forEach(key => log(key));
+          if (dataWithoutSagawa.length > 80) log(`...还有 ${dataWithoutSagawa.length - 80} 条`);
+        }
+        alert(message);
+        return;
+      }
 
       const outputName = `YNE${todayShortForSagawa()}.csv`;
       const history = await loadSagawaHistoryForCheck();
